@@ -1,0 +1,49 @@
+name:                org2any
+version:             0.1.0.0
+github:              "serhiip/org2any"
+license:             BSD3
+author:              "Serhii Pererva"
+maintainer:          "serhii.pererva@gmail.com"
+copyright:           "Copyright (c) 2018 Serhii Pererva"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on Github at <https://github.com/serhiip/org2any#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+
+library:
+  source-dirs: src
+
+executables:
+  org2any:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - org2any
+
+tests:
+  org2any-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - org2any
+    - QuickCheck == 2.10.1
