@@ -21,6 +21,7 @@ description:         Please see the README on Github at <https://github.com/serh
 
 dependencies:
 - base >= 4.7 && < 5
+- free == 5.0.1
 
 library:
   source-dirs: src
