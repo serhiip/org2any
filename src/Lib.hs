@@ -2,7 +2,7 @@ module Lib
     ( someFunc
     ) where
 
-import Control.Monad.Free
+import           Control.Monad.Free
 
 newtype Reminder = Reminder String
   deriving (Show, Eq)
@@ -12,7 +12,7 @@ type Reminders = [Reminder]
 data CommandF x = All (Reminders -> x) | Create Reminder x
 
 instance Functor CommandF where
-  fmap f (All f') = All (f . f')
+  fmap f (All f')     = All (f . f')
   fmap f (Create r x) = Create r (f x)
 
 type Command = Free CommandF
