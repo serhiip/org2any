@@ -29,7 +29,13 @@ list :: Command Reminders
 list = liftF $ All id
 
 create :: Reminder -> Command ()
-create r = liftF $ Create r ()
+create r = do
+  existing <- list
+  if (elem r existing)
+    then Pure ()
+    else liftF $ Create r ()
+
+
 
 runDry :: Command x -> IO x
 runDry (Pure r) = return r

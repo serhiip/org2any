@@ -20,19 +20,26 @@ runTest rems (Free (Create r x)) =
 
 run = fst . (uncurry runTest)
 
-prop_CreateAdds r rs = elem r rs'
+prop_CreateAdds r rs = not (elem r rs) ==> elem r rs'
   where
     _ = (r :: Reminder, rs :: Reminders)
     command = create r
     rs' = run (rs, command)
 
-prop_CreatePersists r rs = (length rs) == (length rs') - 1
+prop_CreatePersists r rs = not (elem r rs) ==> (length rs) == (length rs') - 1
   where
     _ = (r :: Reminder, rs :: Reminders)
     command = create r
     rs' = run (rs, command)
+
+prop_NotCreateExisting r rs = not (elem r rs) ==> (length rs') == (length rs'')
+  where
+    _ = (r :: Reminder, rs :: Reminders)
+    rs'' = r : rs
+    rs' = run (rs'', create r)
 
 checkCommands :: IO ()
 checkCommands = do
   quickCheck prop_CreateAdds
   quickCheck prop_CreatePersists
+  quickCheck prop_NotCreateExisting
