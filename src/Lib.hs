@@ -3,6 +3,7 @@ module Lib
   , Reminders
   , CommandF(All, Create)
   , Command
+  , runDry
   , create
   , list
   ) where
@@ -29,3 +30,8 @@ list = liftF $ All id
 
 create :: Reminder -> Command ()
 create r = liftF $ Create r ()
+
+runDry :: Command x -> IO x
+runDry (Pure r) = return r
+runDry (Free (All f)) = putStrLn "would list all" >> mempty >>= runDry . f
+runDry (Free (Create r x)) = putStrLn ("would create " ++ (show r)) >> runDry x

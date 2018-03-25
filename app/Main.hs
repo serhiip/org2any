@@ -1,6 +1,7 @@
 module Main where
 
 import           Data.Semigroup      ((<>))
+import           Lib
 import           Options.Applicative
 
 data Action = Add
@@ -28,5 +29,7 @@ main = handle =<< execParser opts
      <> header "Remainders helper" )
 
 handle :: Args -> IO ()
-handle (Args a) = putStrLn . show $ a
+handle (Args (Add notes)) = runDry $ create reminder
+  where
+    reminder = Reminder notes
 --handle _             = return ()
