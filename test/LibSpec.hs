@@ -1,5 +1,4 @@
-{-# OPTIONS_GHC -Wno-orphans -Wno-missing-signatures
--Wno-unused-local-binds #-}
+{-# OPTIONS_GHC -Wno-orphans -Wno-missing-signatures #-}
 
 module LibSpec
   ( checkCommands
@@ -23,13 +22,13 @@ run = fst . (uncurry runTest)
 
 prop_CreateAdds r rs = elem r rs'
   where
-    types = (r :: Reminder, rs :: Reminders)
+    _ = (r :: Reminder, rs :: Reminders)
     command = create r
     rs' = run (rs, command)
 
 prop_CreatePersists r rs = (length rs) == (length rs') - 1
   where
-    types = (r :: Reminder, rs :: Reminders)
+    _ = (r :: Reminder, rs :: Reminders)
     command = create r
     rs' = run (rs, command)
 

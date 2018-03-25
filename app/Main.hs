@@ -3,15 +3,16 @@ module Main where
 import           Data.Semigroup      ((<>))
 import           Options.Applicative
 
-data Action =
-  Add { rawNotes :: String }
-  deriving (Show)
+data Action = Add
+  { rawNotes :: String
+  } deriving (Show)
 
 addParser :: Parser Action
 addParser = Add <$> argument str (metavar "REMINDERS")
 
 data Args = Args
-  { action :: Action }
+  { action :: Action
+  }
 
 actionParser :: Parser Args
 actionParser =
