@@ -35,8 +35,6 @@ create r = do
     then Pure ()
     else liftF $ Create r ()
 
-
-
 runDry :: Command x -> IO x
 runDry (Pure r) = return r
 runDry (Free (All f)) = putStrLn "would list all" >> mempty >>= runDry . f
