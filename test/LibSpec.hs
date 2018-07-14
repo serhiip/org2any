@@ -29,8 +29,7 @@ prop_CreateAdds r rs = not (elem r rs) ==> elem r rs'
 prop_CreatePersists r rs = not (elem r rs) ==> (length rs) == (length rs') - 1
   where
     _ = (r :: Reminder, rs :: Reminders)
-    command = create r
-    rs' = run (rs, command)
+    rs' = run (rs, create r)
 
 prop_NotCreateExisting r rs = not (elem r rs) ==> (length rs') == (length rs'')
   where
