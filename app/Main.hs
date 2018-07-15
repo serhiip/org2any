@@ -1,5 +1,6 @@
 module Main where
 
+import           AppleScript         (createTask, listTasks)
 import           Data.Semigroup      ((<>))
 import           Lib
 import           Options.Applicative
@@ -21,12 +22,16 @@ actionParser =
   hsubparser (command "add" (info addParser (progDesc "Create new notes")))
 
 main :: IO ()
-main = handle =<< execParser opts
+main = do
+  createTask "test"
+  listTasks >>= putStrLn . show
+{-main = handle =<< execParser opts
   where
     opts = info (actionParser <**> helper)
       ( fullDesc
      <> progDesc "Create or list remainders in osX Reminders app"
      <> header "Remainders helper" )
+-}
 
 handle :: Args -> IO ()
 handle (Args (Add notes)) = runDry $ create reminder

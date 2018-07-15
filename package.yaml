@@ -25,6 +25,8 @@ dependencies:
 - optparse-applicative == 0.14.2.0
 - typed-process == 0.2.1.0
 - interpolate == 0.2.0
+- bytestring
+- text == 1.2.3.0
 
 library:
   source-dirs: src
