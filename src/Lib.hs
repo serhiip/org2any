@@ -6,11 +6,12 @@ module Lib
   , runDry
   , create
   , list
+  , name
   ) where
 
 import           Control.Monad.Free
 
-newtype Reminder = Reminder String
+newtype Reminder = Reminder { name :: String }
   deriving (Show, Eq)
 
 type Reminders = [Reminder]
@@ -36,6 +37,6 @@ create r = do
     else liftF $ Create r ()
 
 runDry :: Command x -> IO x
-runDry (Pure r) = return r
-runDry (Free (All f)) = putStrLn "would list all" >> mempty >>= runDry . f
+runDry (Pure r) =            return r
+runDry (Free (All f)) =      putStrLn "would list all" >> mempty >>= runDry . f
 runDry (Free (Create r x)) = putStrLn ("would create " ++ (show r)) >> runDry x

@@ -1,40 +1,41 @@
 {-# LANGUAGE QuasiQuotes #-}
 
 module AppleScript
-  (createTask, listTasks) where
+  (runAppleScript
+  ) where
 
+import           Control.Monad.Free
 import           Control.Monad.IO.Class  (MonadIO)
 import           Data.ByteString.Lazy    (toStrict)
 import           Data.String.Interpolate (i)
-import           Data.Text               (Text, split, unpack, strip)
+import           Data.Text               (Text, split, strip, unpack)
 import           Data.Text.Encoding      (decodeUtf8)
-import           Lib                     (Reminder (Reminder))
+import           Lib                     (Command, CommandF (..), Reminder (..), name)
 import           System.Process.Typed    (proc, readProcessStdout_)
 
-
-runAppleScript :: MonadIO m => String -> m Text
-runAppleScript script = do
+executeAppleScript :: MonadIO m => String -> m Text
+executeAppleScript script = do
   outBS <- readProcessStdout_ $ proc "/usr/bin/osascript" args
   return $ decodeUtf8 (toStrict outBS)
   where
     args = "-l" : "JavaScript" : "-e" : script : []
 
 createTask :: MonadIO m => String -> m ()
-createTask name = (runAppleScript script) >> return ()
+createTask taskName = (executeAppleScript script) >> return ()
   where
     script =
       [i|app = Application("Reminders")
          app.defaultList
            .reminders
            .push(app.Reminder({
-             "name":"#{name}",
+             "name":"#{taskName}",
              "body":"asd222",
              "completed":false,
              "priority":9})) |]
 
 listTasks :: MonadIO m => m [Reminder]
 listTasks = do
-  out <- runAppleScript script
+  out <- executeAppleScript script
   return $ reminderFromText <$> split (== ',') out
   where
     script =
@@ -42,3 +43,8 @@ listTasks = do
           var rems = [].slice.call(r.defaultList.reminders)
           rems.map(reminder => reminder.name())|]
     reminderFromText = Reminder . unpack . strip
+
+runAppleScript :: Command x -> IO x
+runAppleScript (Pure r)            = return r
+runAppleScript (Free (All f))      = listTasks >>= runAppleScript . f
+runAppleScript (Free (Create r x)) = (createTask (name r)) >> runAppleScript x
