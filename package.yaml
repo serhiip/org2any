@@ -27,6 +27,8 @@ dependencies:
 - interpolate == 0.2.0
 - bytestring
 - text == 1.2.3.0
+- orgmode-parse == 0.2.1
+- attoparsec
 
 library:
   source-dirs: src
