@@ -4,34 +4,33 @@ module LibSpec
   ( checkCommands
   ) where
 
-import           Control.Monad
 import           Control.Monad.Free
 import           Lib
 import           Test.QuickCheck
 
 instance Arbitrary Reminder where
-  arbitrary = liftM Reminder arbitrary
+  arbitrary = Reminder <$> arbitrary
 
 runTest :: Reminders -> Command x -> (Reminders, x)
 runTest rems (Pure r) = (rems, r)
-runTest rems (Free (All f)) = (runTest rems) . f $ rems
+runTest rems (Free (All f)) = runTest rems . f $ rems
 runTest rems (Free (Create r x)) =
   let rems' = r : rems in runTest rems' x
 
-run = fst . (uncurry runTest)
+run = fst . uncurry runTest
 
-prop_CreateAdds r rs = not (elem r rs) ==> elem r rs'
+prop_CreateAdds r rs = r `notElem` rs ==> elem r rs'
   where
     _ = (r :: Reminder, rs :: Reminders)
     command = create r
     rs' = run (rs, command)
 
-prop_CreatePersists r rs = not (elem r rs) ==> (length rs) == (length rs') - 1
+prop_CreatePersists r rs = r `notElem` rs ==> length rs == length rs' - 1
   where
     _ = (r :: Reminder, rs :: Reminders)
     rs' = run (rs, create r)
 
-prop_NotCreateExisting r rs = not (elem r rs) ==> (length rs') == (length rs'')
+prop_NotCreateExisting r rs = r `notElem` rs ==> length rs' == length rs''
   where
     _ = (r :: Reminder, rs :: Reminders)
     rs'' = r : rs
