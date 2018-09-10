@@ -1,0 +1,3 @@
+[submodule "orgmode-parse"]
+	path = orgmode-parse
+	url = https://github.com/ixmatus/orgmode-parse.git

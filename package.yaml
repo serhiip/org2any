@@ -21,14 +21,14 @@ description:         Please see the README on Github at <https://github.com/serh
 
 dependencies:
 - base >= 4.7 && < 5
-- free == 5.0.1
+- free == 5.0.2
 - optparse-applicative == 0.14.2.0
-- typed-process == 0.2.1.0
+- typed-process == 0.2.3.0
 - interpolate == 0.2.0
 - bytestring
 - text == 1.2.3.0
 - orgmode-parse == 0.2.1
-- attoparsec
+- attoparsec == 0.13.2.2
 
 library:
   source-dirs: src

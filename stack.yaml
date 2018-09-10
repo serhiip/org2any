@@ -15,7 +15,11 @@
 # resolver:
 #  name: custom-snapshot
 #  location: "./custom-snapshot.yaml"
-resolver: lts-11.1
+resolver: lts-11.22
+
+ghc-options:
+    "$locals": -Wall
+    "$targets": -Werror
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -37,10 +41,12 @@ resolver: lts-11.1
 # will not be run. This is useful for tweaking upstream packages.
 packages:
 - .
+- location: ./orgmode-parse
+  extra-dep: true
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
 extra-deps:
-- orgmode-parse-0.2.1
+#- orgmode-parse-0.2.1
 - thyme-0.3.5.5
 
 # Override default flag values for local packages and extra-deps
