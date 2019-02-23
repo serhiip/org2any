@@ -8,7 +8,7 @@ import           Control.Monad.Free
 import           Control.Monad.IO.Class  (MonadIO)
 import           Data.ByteString.Lazy    (toStrict)
 import           Data.String.Interpolate (i)
-import           Data.Text               (Text, split, strip, unpack)
+import           Data.Text               (Text, split, strip)
 import           Data.Text.Encoding      (decodeUtf8)
 import           Lib                     (Command, CommandF (..), Reminder (..), name)
 import           System.Process.Typed    (proc, readProcessStdout_)
@@ -20,7 +20,7 @@ executeAppleScript script = do
   where
     args = "-l" : "JavaScript" : "-e" : script : []
 
-createTask :: MonadIO m => String -> m ()
+createTask :: MonadIO m => Text -> m ()
 createTask taskName = (executeAppleScript script) >> return ()
   where
     script =
@@ -42,7 +42,7 @@ listTasks = do
       [i| var r = Application('Reminders')
           var rems = [].slice.call(r.defaultList.reminders)
           rems.map(reminder => reminder.name())|]
-    reminderFromText = Reminder . unpack . strip
+    reminderFromText = Reminder . strip
 
 runAppleScript :: Command x -> IO x
 runAppleScript (Pure r)            = return r

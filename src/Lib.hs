@@ -10,8 +10,9 @@ module Lib
   ) where
 
 import           Control.Monad.Free
+import           Data.Text as T
 
-newtype Reminder = Reminder { name :: String }
+newtype Reminder = Reminder { name :: T.Text }
   deriving (Show, Eq)
 
 type Reminders = [Reminder]
