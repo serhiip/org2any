@@ -6,6 +6,8 @@ import           Lib
 import           Options.Applicative
 import           Parser              (runParser, allTitles, text)
 import           Data.Text           (pack)
+import           Data.Bifunctor      (bimap)
+import           Data.Foldable       (fold, traverse_)
 
 data Action =
   -- add one reminder item using Reminders Mac OS app
@@ -47,13 +49,13 @@ handle :: Args -> IO ()
 handle (Args (Add body) False) = runAppleScript $ create reminder
   where
     reminder = Reminder (pack body)
-handle (Args (Sync path) _) = do
-  org <- runParser . pack <$> (readFile path)
-  case org of
-    Left err -> print err
-    Right o -> traverse runAppleScript (makeCommands o) >> pure ()
-  where
-    makeCommands = (fmap (create . Reminder . text)) . allTitles
+
+handle (Args (Sync path) _) =
+  let
+    makeCommands = fmap (create . Reminder . text) . allTitles
+  in
+    runParser . pack <$> readFile path
+    >>= fold . bimap print (traverse_ runAppleScript . makeCommands)
 
 handle (Args _ True) = pack <$> readFile "test.org" >>= print . runParser
 --handle _             = return ()

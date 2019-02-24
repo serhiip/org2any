@@ -7,9 +7,10 @@ module LibSpec
 import           Control.Monad.Free
 import           Lib
 import           Test.QuickCheck
+import           Data.Text            (pack)
 
 instance Arbitrary Reminder where
-  arbitrary = Reminder <$> arbitrary
+  arbitrary = Reminder . pack <$> arbitrary
 
 runTest :: Reminders -> Command x -> (Reminders, x)
 runTest rems (Pure r) = (rems, r)
