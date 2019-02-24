@@ -56,4 +56,4 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - org2any
-    - QuickCheck == 2.10.1
+    - QuickCheck == 2.12.6.1
