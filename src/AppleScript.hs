@@ -4,13 +4,14 @@ module AppleScript
   (runAppleScript
   ) where
 
+import           Command                 (Command, CommandF (..), Reminder (..),
+                                          name)
 import           Control.Monad.Free
 import           Control.Monad.IO.Class  (MonadIO)
 import           Data.ByteString.Lazy    (toStrict)
 import           Data.String.Interpolate (i)
 import           Data.Text               (Text, split, strip)
 import           Data.Text.Encoding      (decodeUtf8)
-import           Lib                     (Command, CommandF (..), Reminder (..), name)
 import           System.Process.Typed    (proc, readProcessStdout_)
 
 executeAppleScript :: MonadIO m => String -> m Text

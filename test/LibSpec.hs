@@ -5,7 +5,7 @@ module LibSpec
   ) where
 
 import           Control.Monad.Free
-import           Lib
+import           Command
 import           Test.QuickCheck
 import           Data.Text            (pack)
 

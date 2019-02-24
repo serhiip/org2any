@@ -1,4 +1,4 @@
-module Lib
+module Command
   ( Reminder(Reminder)
   , Reminders
   , CommandF(All, Create)
