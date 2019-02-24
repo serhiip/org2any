@@ -6,6 +6,7 @@ module AppleScript
 
 import           Command                 (Command, CommandF (..), Reminder (..),
                                           name)
+import           Control.Monad           (void)
 import           Control.Monad.Free
 import           Control.Monad.IO.Class  (MonadIO)
 import           Data.ByteString.Lazy    (toStrict)
@@ -14,38 +15,42 @@ import           Data.Text               (Text, split, strip)
 import           Data.Text.Encoding      (decodeUtf8)
 import           System.Process.Typed    (proc, readProcessStdout_)
 
-executeAppleScript :: MonadIO m => String -> m Text
-executeAppleScript script = do
+execute :: MonadIO m => String -> m Text
+execute script = do
   outBS <- readProcessStdout_ $ proc "/usr/bin/osascript" args
-  return $ decodeUtf8 (toStrict outBS)
+  return $ out outBS
   where
-    args = "-l" : "JavaScript" : "-e" : script : []
+    args = ["-l", "JavaScript", "-e", script]
+    out = decodeUtf8 . toStrict
 
-createTask :: MonadIO m => Text -> m ()
-createTask taskName = (executeAppleScript script) >> return ()
-  where
-    script =
-      [i|app = Application("Reminders")
-         app.defaultList
-           .reminders
-           .push(app.Reminder({
-             "name":"#{taskName}",
-             "body":"asd222",
-             "completed":false,
-             "priority":9})) |]
+create :: MonadIO m => Text -> m ()
+create = createAll . pure
 
-listTasks :: MonadIO m => m [Reminder]
-listTasks = do
-  out <- executeAppleScript script
-  return $ reminderFromText <$> split (== ',') out
+createAll :: MonadIO m => [Text] -> m ()
+createAll names =
+  void $ execute [i|app = Application("Reminders"); #{addAllScript}|]
   where
-    script =
+    addAllScript =
+      concatMap
+        (\n ->
+           [i|app.defaultList.reminders.push(
+               app.Reminder({
+                 "name": "#{n}",
+                 "body": "asd222",
+                 "completed":false,
+                 "priority":9}));|])
+        names
+
+list :: MonadIO m => m [Reminder]
+list = do
+  out <-
+    execute
       [i| var r = Application('Reminders')
           var rems = [].slice.call(r.defaultList.reminders)
           rems.map(reminder => reminder.name())|]
-    reminderFromText = Reminder . strip
+  return $ (Reminder . strip) <$> split (== ',') out
 
 runAppleScript :: Command x -> IO x
 runAppleScript (Pure r)            = return r
-runAppleScript (Free (All f))      = listTasks >>= runAppleScript . f
-runAppleScript (Free (Create r x)) = (createTask (name r)) >> runAppleScript x
+runAppleScript (Free (All f))      = list >>= runAppleScript . f
+runAppleScript (Free (Create r x)) = create (name r) >> runAppleScript x
