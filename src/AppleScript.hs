@@ -54,3 +54,5 @@ runAppleScript :: Command x -> IO x
 runAppleScript (Pure r)            = return r
 runAppleScript (Free (All f))      = list >>= runAppleScript . f
 runAppleScript (Free (Create r x)) = create (name r) >> runAppleScript x
+runAppleScript (Free (CreateMany rs x)) =
+  createAll (name <$> rs) >> runAppleScript x

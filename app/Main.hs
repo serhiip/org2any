@@ -3,13 +3,14 @@ module Main where
 import           AppleScript         (runAppleScript)
 import           Command
 import           Data.Bifunctor      (bimap)
-import           Data.Foldable       (fold, traverse_)
+import           Data.Foldable       (fold)
 import           Data.Semigroup      ((<>))
 import           Data.Text           (pack)
 import           Options.Applicative
 import           Parser              (allTitles, runParser, text)
 
 import           Args
+import           Control.Monad       (unless)
 import           System.Directory
 import           System.FilePath
 import           System.FSNotify     hiding (Action)
@@ -43,6 +44,8 @@ main = handle =<< execParser opts
       else execute
       where
         makeCommands = fmap (create . Reminder . text) . allTitles
+        run commands = unless (null commands) $
+                       runAppleScript $ foldl1 (>>) commands
         execute =
           runParser . pack <$> readFile path >>=
-          fold . bimap print (traverse_ runAppleScript . makeCommands)
+          fold . bimap print (run . makeCommands)

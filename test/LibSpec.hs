@@ -4,10 +4,10 @@ module LibSpec
   ( checkCommands
   ) where
 
-import           Control.Monad.Free
 import           Command
+import           Control.Monad.Free
+import           Data.Text          (pack)
 import           Test.QuickCheck
-import           Data.Text            (pack)
 
 instance Arbitrary Reminder where
   arbitrary = Reminder . pack <$> arbitrary
@@ -17,6 +17,9 @@ runTest rems (Pure r) = (rems, r)
 runTest rems (Free (All f)) = runTest rems . f $ rems
 runTest rems (Free (Create r x)) =
   let rems' = r : rems in runTest rems' x
+runTest rems (Free (CreateMany rs x)) =
+  runTest (rs ++ rems) x
+
 
 run = fst . uncurry runTest
 
