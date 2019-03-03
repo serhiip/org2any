@@ -1,5 +1,5 @@
 module Command
-  ( Reminder(Reminder)
+  ( Reminder(..)
   , Reminders
   , CommandF(..)
   , Command
@@ -7,14 +7,13 @@ module Command
   , create
   , createMany
   , list
-  , name
   ) where
 
 import           Control.Monad.Free
 import           Data.List          (intercalate)
 import qualified Data.Text          as T
 
-newtype Reminder = Reminder { name :: T.Text }
+data Reminder = Reminder { name :: T.Text }
   deriving (Show, Eq)
 
 type Reminders = [Reminder]

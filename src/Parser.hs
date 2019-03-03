@@ -1,5 +1,11 @@
-module Parser (titles, doc, runParser, text, allTitles) where
+module Parser
+  ( titles
+  , doc
+  , runParser
+  , reminders
+  ) where
 
+import           Command              (Reminder (..), Reminders)
 import           Control.Monad        (mzero)
 import qualified Data.Attoparsec.Text as A
 import           Data.Bifunctor       (bimap)
@@ -19,8 +25,8 @@ runParser = bimap verboseError Org . A.parseOnly parser
 
 newtype Title = Title {text :: T.Text} deriving Show
 
-titles :: O.Headline -> [Title]
-titles item = (Title . O.title) item : concat (titles <$> O.subHeadlines item)
+titles :: O.Headline -> [T.Text]
+titles item = O.title item : concat (titles <$> O.subHeadlines item)
 
-allTitles :: Org -> [Title]
-allTitles = concat . (titles <$>) . O.documentHeadlines . doc
+reminders :: Org -> Reminders
+reminders =  fmap Reminder . concat . (titles <$>) . O.documentHeadlines . doc

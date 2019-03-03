@@ -7,10 +7,9 @@ import           Data.Foldable       (fold)
 import           Data.Semigroup      ((<>))
 import           Data.Text           (pack)
 import           Options.Applicative
-import           Parser              (allTitles, runParser, text)
+import           Parser              (reminders, runParser)
 
 import           Args
-import           Control.Monad       (unless)
 import           System.Directory
 import           System.FilePath
 import           System.FSNotify     hiding (Action)
@@ -29,7 +28,7 @@ main = handle =<< execParser opts
         reminder = Reminder (pack body)
     handle (Args (Sync path toWatch)) =
       if toWatch
-      then withManager $ \mgr -> do
+      then withManager $ \mgr -> execute >> do
         canonPath <- canonicalizePath path
         stop <-
           watchDir
@@ -38,14 +37,11 @@ main = handle =<< execParser opts
           (equalFilePath canonPath . eventPath)
           (const execute)
         putStrLn "Listening for changes..."
-        putStrLn "📝 Press any key to stop"
+        putStrLn "📝 Press <enter> to stop"
         _ <- getChar
         stop
       else execute
       where
-        makeCommands = fmap (create . Reminder . text) . allTitles
-        run commands = unless (null commands) $
-                       runAppleScript $ foldl1 (>>) commands
         execute =
           runParser . pack <$> readFile path >>=
-          fold . bimap print (run . makeCommands)
+          fold . bimap print (runAppleScript . createMany . reminders)
