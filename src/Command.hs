@@ -47,5 +47,3 @@ runDry (Free (All f)) = putStrLn "would list all" >> mempty >>= runDry . f
 runDry (Free (Create r x)) = putStrLn ("would create " ++ show r) >> runDry x
 runDry (Free (CreateMany rs x)) =
   putStrLn ("would create all " ++ intercalate ", " (show <$> rs)) >> runDry x
-
-  -- runDry $ create ((Reminder . T.pack) "BueouBBBB") >>= (const (create ((Reminder . T.pack) "BueouBBBB")))
