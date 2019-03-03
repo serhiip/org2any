@@ -2,6 +2,8 @@ module Args (
   actionParser
   , Args (..)
   , Action (..)
+  , arguments
+  , execParser
   ) where
 
 import           Options.Applicative
@@ -39,3 +41,9 @@ actionParser =
      command
        "sync"
        (info syncParser (progDesc "Synchronize items from spcified file")))
+
+arguments :: ParserInfo Args
+arguments =
+  info
+    (actionParser <**> helper)
+    (fullDesc <> progDesc "Add new reminder" <> header "Reminders helper")

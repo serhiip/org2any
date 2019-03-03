@@ -1,27 +1,20 @@
 module Main where
 
-import           AppleScript         (runAppleScript)
+import           AppleScript      (runAppleScript)
+import           Args             (Action (..), Args (..), arguments,
+                                   execParser)
 import           Command
-import           Data.Bifunctor      (bimap)
-import           Data.Foldable       (fold)
-import           Data.Semigroup      ((<>))
-import           Data.Text           (pack)
-import           Options.Applicative
-import           Parser              (reminders, runParser)
-
-import           Args
+import           Data.Bifunctor   (bimap)
+import           Data.Foldable    (fold)
+import           Data.Text        (pack)
+import           Parser           (reminders, runParser)
 import           System.Directory
 import           System.FilePath
-import           System.FSNotify     hiding (Action)
+import           System.FSNotify  hiding (Action)
 
 main :: IO ()
-main = handle =<< execParser opts
+main = handle =<< execParser arguments
   where
-    opts =
-      info
-        (actionParser <**> helper)
-        (fullDesc <> progDesc "Add new reminder" <> header "Reminders helper")
-
     handle :: Args -> IO ()
     handle (Args (Add body)) = runAppleScript $ create reminder
       where
