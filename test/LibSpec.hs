@@ -8,6 +8,7 @@ import           Command
 import           Control.Monad.Free
 import           Data.Text          (pack)
 import           Test.QuickCheck
+import           Types
 
 instance Arbitrary Reminder where
   arbitrary = Reminder . pack <$> arbitrary
@@ -19,7 +20,6 @@ runTest rems (Free (Create r x)) =
   let rems' = r : rems in runTest rems' x
 runTest rems (Free (CreateMany rs x)) =
   runTest (rs ++ rems) x
-
 
 run = fst . uncurry runTest
 

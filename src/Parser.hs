@@ -5,7 +5,7 @@ module Parser
   , reminders
   ) where
 
-import           Command              (Reminder (..), Reminders)
+import           Types              (Reminder (..), Reminders)
 import           Control.Monad        (mzero)
 import qualified Data.Attoparsec.Text as A
 import           Data.Bifunctor       (bimap)

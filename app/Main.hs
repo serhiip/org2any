@@ -11,6 +11,7 @@ import           Parser           (reminders, runParser)
 import           System.Directory
 import           System.FilePath
 import           System.FSNotify  hiding (Action)
+import           Types
 
 main :: IO ()
 main = handle =<< execParser arguments
