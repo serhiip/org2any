@@ -48,7 +48,7 @@ list = do
       [i| var r = Application('Reminders')
           var rems = [].slice.call(r.defaultList.reminders)
           rems.map(reminder => reminder.name())|]
-  return $ (Reminder . strip) <$> split (== ',') out
+  return $ Reminder . strip <$> split (== ',') out
 
 runAppleScript :: Command x -> IO x
 runAppleScript (Pure r)            = return r
