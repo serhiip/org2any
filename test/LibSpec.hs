@@ -7,6 +7,7 @@ module LibSpec
 import           Command
 import           Control.Monad.Free
 import           Data.Text          (pack)
+import           Data.List          (delete, nub)
 import           Test.QuickCheck
 import           Types
 
@@ -20,6 +21,8 @@ runTest rems (Free (Create r x)) =
   let rems' = r : rems in runTest rems' x
 runTest rems (Free (CreateMany rs x)) =
   runTest (rs ++ rems) x
+runTest rems (Free (Delete r x)) =
+  let rems' = delete r rems in runTest rems' x
 
 run = fst . uncurry runTest
 
@@ -40,8 +43,16 @@ prop_NotCreateExisting r rs = r `notElem` rs ==> length rs' == length rs''
     rs'' = r : rs
     rs' = run (rs'', create r)
 
+
+prop_DeletesExisting r rs = r `notElem` rs'
+  where
+    _ = (r :: Reminder, rs :: Reminders)
+    rs'' = r : rs
+    rs' = run (nub rs'', del r)
+
 checkCommands :: IO ()
 checkCommands = do
   quickCheck prop_CreateAdds
   quickCheck prop_CreatePersists
   quickCheck prop_NotCreateExisting
+  quickCheck prop_DeletesExisting

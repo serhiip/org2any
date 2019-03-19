@@ -50,9 +50,20 @@ list = do
           rems.map(reminder => reminder.name())|]
   return $ Reminder . strip <$> split (== ',') out
 
+del :: MonadIO m => Reminder -> m ()
+del r = void $ execute
+           [i| app = Application('Reminders')
+               items = app.defaultList.reminders()
+               for (var item of items) {
+                   if (item.name() == '#{name r}') {
+                       app.delete(item)
+                   }
+               }|]
+
 runAppleScript :: Command x -> IO x
 runAppleScript (Pure r)            = return r
 runAppleScript (Free (All f))      = list >>= runAppleScript . f
 runAppleScript (Free (Create r x)) = create (name r) >> runAppleScript x
 runAppleScript (Free (CreateMany rs x)) =
   createAll (name <$> rs) >> runAppleScript x
+runAppleScript (Free (Delete r x)) = del r >> runAppleScript x
