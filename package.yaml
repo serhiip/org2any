@@ -59,3 +59,4 @@ tests:
     dependencies:
     - org2any
     - QuickCheck == 2.12.6.1
+    - hspec == 2.6.1

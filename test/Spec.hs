@@ -1,4 +1,6 @@
 import           LibSpec
 
+import           Test.Hspec
+
 main :: IO ()
-main = checkCommands
+main = hspec spec
