@@ -7,13 +7,16 @@ module LibSpec
 import           Command
 import           Control.Monad.Free
 import           Data.List          (delete, nub)
-import           Data.Text          (pack)
+import           Data.Text          (Text, pack)
 import           Test.Hspec
 import           Test.QuickCheck
 import           Types
 
+instance Arbitrary Text where
+  arbitrary = pack <$> arbitrary
+
 instance Arbitrary Reminder where
-  arbitrary = Reminder . pack <$> arbitrary
+  arbitrary = Reminder <$> arbitrary <*> arbitrary
 
 eval :: Reminders -> Command x -> (Reminders, x)
 eval rems (Pure r) = (rems, r)
@@ -28,7 +31,7 @@ eval rems (Free (Delete r x)) =
 run = fst . uncurry eval
 
 spec :: Spec
-spec = do
+spec =
   describe "Main Algo" $ do
 
     describe "create" $ do
@@ -36,7 +39,7 @@ spec = do
       it "should not duplicate existing todos" $ property prop_NotCreateExisting
       it "should persist existing todos" $ property prop_CreatePersists
 
-    describe "del" $ do
+    describe "del" $
       it "should remove todos" $ property prop_DeletesExisting
 
   where

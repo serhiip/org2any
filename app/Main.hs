@@ -12,14 +12,16 @@ import           System.Directory
 import           System.FilePath
 import           System.FSNotify  hiding (Action)
 import           Types
+import           Data.UUID        (toText)
+import           System.Random    (randomIO)
 
 main :: IO ()
 main = handle =<< execParser arguments
   where
     handle :: Args -> IO ()
-    handle (Args (Add body)) = runAppleScript $ create reminder
-      where
-        reminder = Reminder (pack body)
+    handle (Args (Add body)) = do
+      ident <- randomIO
+      runAppleScript . create $ Reminder (pack body) (toText ident)
     handle (Args (Sync path toWatch)) =
       if toWatch
       then withManager $ \mgr -> execute >> do

@@ -5,9 +5,14 @@ module Types
 
 import qualified Data.Text as T
 
+-- | Main representation of TODO item
+data Reminder = Reminder
+  { todoName :: T.Text
+  , todoId   :: T.Text
+  } deriving (Show)
 
-data Reminder = Reminder { name :: T.Text }
-  deriving (Show, Eq)
+instance Eq Reminder where
+  r == r2 = todoId r == todoId r2
 
 type Reminders = [Reminder]
 
