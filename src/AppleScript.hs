@@ -63,7 +63,7 @@ del r = void $ execute
            [i| app = Application('Reminders')
                items = app.defaultList.reminders()
                for (var item of items) {
-                   if (item.name() == '#{todoName r}') {
+                   if (item.name().indexOf('#{todoId r}') > -1) {
                        app.delete(item)
                    }
                }|]
