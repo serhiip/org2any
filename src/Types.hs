@@ -14,5 +14,8 @@ data Reminder = Reminder
 instance Eq Reminder where
   r == r2 = todoId r == todoId r2
 
+instance Ord Reminder where
+  compare r1 r2 = compare (todoId r1) (todoId r2)
+
 type Reminders = [Reminder]
 
