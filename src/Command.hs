@@ -7,25 +7,25 @@ module Command
     , createMany
     , list
     , del
-    , updateAll
+    , updateMany
+    , sync
     ) where
 
 import           Control.Monad.Free
-import           Data.List          (intercalate)
+import           Data.Set
+import           Prelude            hiding (filter)
 import           Types
 
 data CommandF x =
-    Create Reminder x
-  | All (Reminders -> x)
+  All (Reminders -> x)
   | CreateMany Reminders x
-  | Delete Reminder x
+  | DeleteMany Reminders x
   | UpdateAll Reminders x
 
 instance Functor CommandF where
   fmap f (All f')          = All (f . f')
-  fmap f (Create r x)      = Create r (f x)
   fmap f (CreateMany rs x) = CreateMany rs (f x)
-  fmap f (Delete r x)      = Delete r (f x)
+  fmap f (DeleteMany rs x) = DeleteMany rs (f x)
   fmap f (UpdateAll rs x)  = UpdateAll rs (f x)
 
 type Command = Free CommandF
@@ -34,7 +34,7 @@ list :: Command Reminders
 list = liftF $ All id
 
 create :: Reminder -> Command ()
-create = createMany . pure
+create = createMany . singleton
 
 createMany :: Reminders -> Command ()
 createMany rs = do
@@ -42,18 +42,29 @@ createMany rs = do
   liftF $ CreateMany (filter (not . flip elem existing) rs) ()
 
 del :: Reminder -> Command ()
-del = liftF . flip Delete ()
+del = delMany . singleton
 
-updateAll :: Reminders -> Command ()
-updateAll = liftF . flip UpdateAll ()
+delMany :: Reminders -> Command ()
+delMany = liftF . flip DeleteMany ()
+
+updateMany :: Reminders -> Command ()
+updateMany = liftF . flip UpdateAll ()
+
+sync :: Reminders -> Command ()
+sync toSync = do
+  existing <- list
+  let (updates, creations) = partition (`elem` existing) toSync
+      deletions = filter (`notElem` toSync) existing
+
+  updateMany updates
+  delMany deletions
+  createMany creations
+  pure ()
 
 runDry :: Command x -> IO x
 runDry (Pure r           ) = return r
 runDry (Free (All f     )) = putStrLn "would list all" >> mempty >>= runDry . f
-runDry (Free (Create r x)) = putStrLn ("would create " ++ show r) >> runDry x
-runDry (Free (CreateMany rs x)) =
-  putStrLn ("would create " ++ allStr) >> runDry x
-  where
-    allStr = intercalate ", " (show <$> rs)
-runDry (Free (Delete r x)) = putStrLn ("would delete " ++ show r) >> runDry x
+runDry (Free (CreateMany rs x)) = putStrLn ("would create " ++ show rs) >> runDry x
+runDry (Free (DeleteMany rs x)) = putStrLn ("would delete " ++ show rs) >> runDry x
 runDry (Free (UpdateAll rs x)) = putStrLn ("would delete " ++ show rs) >> runDry x
+

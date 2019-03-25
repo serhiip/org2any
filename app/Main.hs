@@ -40,4 +40,4 @@ main = handle =<< execParser arguments
       where
         execute =
           runParser . pack <$> readFile path >>=
-          fold . bimap print (runAppleScript . createMany . reminders)
+          fold . bimap print (runAppleScript . sync . reminders)

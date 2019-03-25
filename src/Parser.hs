@@ -11,6 +11,7 @@ import           Data.Bifunctor       (bimap)
 import           Data.HashMap.Strict  (lookupDefault)
 import qualified Data.OrgMode.Parse   as O
 import qualified Data.OrgMode.Types   as O
+import           Data.Set             (fromList)
 import qualified Data.Text            as T
 import           Types                (Reminder (..), Reminders)
 
@@ -32,4 +33,6 @@ titles item = (O.title item, rid item) : concat (titles <$> O.subHeadlines item)
         lookupId = lookupDefault (T.pack "noid") (T.pack "CUSTOM_ID")
 
 reminders :: Org -> Reminders
-reminders =  fmap (uncurry Reminder) . concat . (titles <$>) . O.documentHeadlines . doc
+reminders =
+  fromList .
+  fmap (uncurry Reminder) . concat . (titles <$>) . O.documentHeadlines . doc

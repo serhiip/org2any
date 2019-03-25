@@ -3,6 +3,7 @@ module Types
   , Reminders
   ) where
 
+import           Data.Set
 import qualified Data.Text as T
 
 -- | Main representation of TODO item
@@ -17,5 +18,5 @@ instance Eq Reminder where
 instance Ord Reminder where
   compare r1 r2 = compare (todoId r1) (todoId r2)
 
-type Reminders = [Reminder]
+type Reminders = Set Reminder
 

@@ -11,8 +11,9 @@ import           Control.Monad           (void)
 import           Control.Monad.Free
 import           Control.Monad.IO.Class  (MonadIO)
 import           Data.Aeson
-import           Data.ByteString.Lazy    (toStrict)
-import           Data.Map.Strict         (fromList)
+import           Data.ByteString.Lazy    (ByteString, toStrict)
+import qualified Data.Map.Strict         as MS
+import           Data.Set
 import           Data.String.Interpolate (i)
 import           Data.Text               (Text, split, splitOn, strip, unpack)
 import           Data.Text.Encoding      (decodeUtf8)
@@ -34,11 +35,8 @@ execute script = do
     args = ["-l", "JavaScript", "-e", script]
     out = decodeUtf8 . toStrict
 
-create :: MonadIO m => Reminder -> m ()
-create = createAll . pure
-
-createAll :: MonadIO m => [Reminder] -> m ()
-createAll names =
+createMany :: MonadIO m => Reminders -> m ()
+createMany names =
   void $ execute [i|app = Application("Reminders"); #{addAllScript}|]
   where
     addAllScript =
@@ -52,7 +50,7 @@ createAll names =
                  "priority":9}));|])
         names
 
-list :: MonadIO m => m [Reminder]
+list :: MonadIO m => m Reminders
 list = do
   out <-
     execute
@@ -60,30 +58,33 @@ list = do
           var rems = [].slice.call(r.defaultList.reminders)
           rems.map(reminder => reminder.name())|]
   return $
-    fmap make $
-    filter (\it -> length it > 1) $ splitOn "|" . strip <$> split (== ',') out
+    fromList . fmap make $
+    Prelude.filter (\it -> length it > 1) $
+    splitOn "|" . strip <$> Data.Text.split (== ',') out
   where
     make item =
       case item of
         (name:id':_) -> Reminder name id'
-        _            -> error "should not happen"
+        _ -> error "should not happen"
 
-del :: MonadIO m => Reminder -> m ()
-del r = void $ execute
+deleteMany :: MonadIO m => Reminders -> m ()
+deleteMany rs = void $ execute
            [i| app = Application('Reminders')
                items = app.defaultList.reminders()
+               const deletions = #{asJSObject rs}
                for (var item of items) {
-                   if (item.name().indexOf('#{todoId r}') > -1) {
+                   const [name, id] = item.name().split('|', 2)
+                   if (id in deletions) {
                        app.delete(item)
                    }
                }|]
 
-updateAll :: MonadIO m => Reminders -> m ()
-updateAll rems =
+updateMany :: MonadIO m => Reminders -> m ()
+updateMany rems =
   void $ execute [i|
                    app = Application('Reminders')
                    items = app.defaultList.reminders()
-                   updates = #{enc}
+                   updates = #{asJSObject rems}
                    for (const item of items) {
                        const [name, id] = item.name().split('|', 2)
                        if (id in updates) {
@@ -100,12 +101,14 @@ updateAll rems =
                            }
                         }
                     }|]
-  where enc = fromList $ (,) <$> unpack . todoId <*> encode <$> rems
+
+asJSObject :: Reminders -> ByteString
+asJSObject rems =
+  encode . MS.fromList $ (,) <$> (unpack . todoId) <*> id <$> toList rems
 
 runAppleScript :: Command x -> IO x
 runAppleScript (Pure r)                 = return r
 runAppleScript (Free (All f))           = list >>= runAppleScript . f
-runAppleScript (Free (Create r x))      = create r >> runAppleScript x
-runAppleScript (Free (CreateMany rs x)) = createAll rs >> runAppleScript x
-runAppleScript (Free (Delete r x))      = del r >> runAppleScript x
-runAppleScript (Free (UpdateAll rs x))  = updateAll rs >> runAppleScript x
+runAppleScript (Free (CreateMany rs x)) = createMany rs >> runAppleScript x
+runAppleScript (Free (DeleteMany rs x)) = deleteMany rs >> runAppleScript x
+runAppleScript (Free (UpdateAll rs x))  = updateMany rs >> runAppleScript x
