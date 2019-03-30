@@ -18,14 +18,18 @@ import           Data.String.Interpolate (i)
 import           Data.Text               (Text, split, splitOn, strip, unpack)
 import           Data.Text.Encoding      (decodeUtf8)
 import           System.Process.Typed    (proc, readProcessStdout_)
-import           Types                   (Reminder (..), Reminders)
+import           Types                   (Reminder (..), Reminders,
+                                          TodoStatus (..))
 
 instance ToJSON Reminder where
-  toJSON (Reminder n id') = object ["name" .= name, "body" .= ("nn" :: String)]
+  toJSON (Reminder n id' b s) = object ["name" .= name, "body" .= b, "completed" .= status]
     where name = unpack n ++ " |" ++ unpack id'
+          status = Done `elem` s
 
-  toEncoding (Reminder n id') = pairs ("name" .= name <> "body" .= ("nn" :: String))
+
+  toEncoding (Reminder n id' b s) = pairs ("name" .= name <> "body" .= b <> "completed" .= status)
     where name = unpack n ++ " |" ++ unpack id'
+          status = Done `elem` s
 
 execute :: MonadIO m => String -> m Text
 execute script = do
@@ -36,19 +40,13 @@ execute script = do
     out = decodeUtf8 . toStrict
 
 createMany :: MonadIO m => Reminders -> m ()
-createMany names =
+createMany rems =
   void $ execute [i|app = Application("Reminders"); #{addAllScript}|]
   where
     addAllScript =
       concatMap
-        (\n ->
-           [i|app.defaultList.reminders.push(
-               app.Reminder({
-                 "name": "#{todoName n} |#{todoId n}",
-                 "body": "asd222",
-                 "completed":false,
-                 "priority":9}));|])
-        names
+        (\n -> [i|app.defaultList.reminders.push(app.Reminder(#{encode n}));|])
+        rems
 
 list :: MonadIO m => m Reminders
 list = do
@@ -64,8 +62,8 @@ list = do
   where
     make item =
       case item of
-        (name:id':_) -> Reminder name id'
-        _ -> error "should not happen"
+        (name:id':_) -> Reminder name id' "a" (pure Todo)
+        _            -> error "should not happen"
 
 deleteMany :: MonadIO m => Reminders -> m ()
 deleteMany rs = void $ execute

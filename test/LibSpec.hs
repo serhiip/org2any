@@ -17,8 +17,11 @@ import           Types
 instance Arbitrary Text where
   arbitrary = pack <$> arbitrary
 
+instance Arbitrary TodoStatus where
+  arbitrary = oneof $ return <$> [Done, Todo, InProgress]
+
 instance Arbitrary Reminder where
-  arbitrary = Reminder <$> arbitrary <*> arbitrary
+  arbitrary = Reminder <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 eval :: Reminders -> Command x -> (Reminders, x)
 eval rems (Pure r) = (rems, r)

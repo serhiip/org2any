@@ -21,7 +21,7 @@ main = handle =<< execParser arguments
     handle :: Args -> IO ()
     handle (Args (Add body)) = do
       ident <- randomIO
-      runAppleScript . create $ Reminder (pack body) (toText ident)
+      runAppleScript . create $ Reminder (pack body) (toText ident) (pack "") (Just Todo)
     handle (Args (Sync path toWatch)) =
       if toWatch
       then withManager $ \mgr -> execute >> do
