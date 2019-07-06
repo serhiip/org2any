@@ -1,11 +1,13 @@
 module Types
-  ( Reminder (..)
+  ( Reminder(..)
   , Reminders
-  , TodoStatus (..)
-  ) where
+  , TodoStatus(..)
+  )
+where
 
+import           Data.Function                  ( on )
 import           Data.Set
-import qualified Data.Text as T
+import qualified Data.Text                     as T
 
 data TodoStatus
   = Todo
@@ -22,9 +24,9 @@ data Reminder = Reminder
   } deriving (Show)
 
 instance Eq Reminder where
-  r == r2 = todoId r == todoId r2
+  (==) = (==) `on` todoId
 
 instance Ord Reminder where
-  compare r1 r2 = compare (todoId r1) (todoId r2)
+  compare = compare `on` todoId
 
 type Reminders = Set Reminder
