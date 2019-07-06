@@ -89,12 +89,8 @@ updateMany rems =
                            const to = updates[id]
                            for (const attr_name in to) {
                                const upd = to[attr_name]
-                               if (attr_name == 'name') {
-                                   item['name'] = to['name'] + ' |' + id
-                               } else {
-                                   if (item[attr_name]() != upd) {
-                                       item[attr_name] = upd
-                                   }
+                               if (item[attr_name]() != upd) {
+                                   item[attr_name] = upd
                                }
                            }
                         }
