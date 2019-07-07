@@ -1,10 +1,11 @@
-module Args (
-  actionParser
-  , Args (..)
-  , Action (..)
+module Args
+  ( actionParser
+  , Args(..)
+  , Action(..)
   , arguments
   , execParser
-  ) where
+  )
+where
 
 import           Options.Applicative
 
@@ -15,10 +16,7 @@ data Action
   deriving (Show)
 
 watchOpt :: Parser Bool
-watchOpt =
-  switch
-    (long "watch" <> short 'w' <>
-     help "Watch file changes and execute a sync on each change")
+watchOpt = switch (long "watch" <> short 'w' <> help "Watch file changes and execute a sync on each change")
 
 fileArg :: Parser FilePath
 fileArg = argument str (metavar "FILEPATH")
@@ -34,16 +32,10 @@ data Args = Args
   }
 
 actionParser :: Parser Args
-actionParser =
-  Args <$>
-  hsubparser
-    (command "add" (info addParser (progDesc "Create new reminder")) <>
-     command
-       "sync"
-       (info syncParser (progDesc "Synchronize items from spcified file")))
+actionParser = Args <$> hsubparser
+  (  command "add"  (info addParser (progDesc "Create new reminder"))
+  <> command "sync" (info syncParser (progDesc "Synchronize items from spcified file"))
+  )
 
 arguments :: ParserInfo Args
-arguments =
-  info
-    (actionParser <**> helper)
-    (fullDesc <> progDesc "Add new reminder" <> header "Reminders helper")
+arguments = info (actionParser <**> helper) (fullDesc <> progDesc "Add new reminder" <> header "Reminders helper")

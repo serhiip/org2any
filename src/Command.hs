@@ -1,19 +1,20 @@
 module Command
-    ( Reminders
-    , CommandF(..)
-    , Command
-    , runDry
-    , create
-    , createMany
-    , list
-    , del
-    , updateMany
-    , sync
-    ) where
+  ( Reminders
+  , CommandF(..)
+  , Command
+  , runDry
+  , create
+  , createMany
+  , list
+  , del
+  , updateMany
+  , sync
+  )
+where
 
 import           Control.Monad.Free
 import           Data.Set
-import           Prelude            hiding (filter)
+import           Prelude                 hiding ( filter )
 import           Types
 
 data CommandF x =
@@ -54,7 +55,7 @@ sync :: Reminders -> Command ()
 sync toSync = do
   existing <- list
   let (updates, creations) = partition (`elem` existing) toSync
-      deletions = filter (`notElem` toSync) existing
+      deletions            = filter (`notElem` toSync) existing
 
   updateMany updates
   delMany deletions
@@ -62,9 +63,8 @@ sync toSync = do
   pure ()
 
 runDry :: Command x -> IO x
-runDry (Pure r           ) = return r
-runDry (Free (All f     )) = putStrLn "would list all" >> mempty >>= runDry . f
+runDry (Pure r                ) = return r
+runDry (Free (All f          )) = putStrLn "would list all" >> mempty >>= runDry . f
 runDry (Free (CreateMany rs x)) = putStrLn ("would create " ++ show rs) >> runDry x
 runDry (Free (DeleteMany rs x)) = putStrLn ("would delete " ++ show rs) >> runDry x
-runDry (Free (UpdateAll rs x)) = putStrLn ("would delete " ++ show rs) >> runDry x
-
+runDry (Free (UpdateAll  rs x)) = putStrLn ("would delete " ++ show rs) >> runDry x
