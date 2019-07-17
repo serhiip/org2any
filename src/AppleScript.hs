@@ -13,22 +13,21 @@ import           Control.Monad.IO.Class  (MonadIO)
 import           Data.Aeson
 import           Data.ByteString.Lazy    (ByteString, toStrict)
 import qualified Data.Map.Strict         as MS
-import           Data.Set
+import           Data.Foldable           (toList)
 import           Data.String.Interpolate (i)
-import           Data.Text               (Text, split, splitOn, strip, unpack)
+import           Data.Text               (Text, split, splitOn, strip)
 import           Data.Text.Encoding      (decodeUtf8)
 import           System.Process.Typed    (proc, readProcessStdout_)
 import           Types                   (Reminder (..), Reminders,
-                                          TodoStatus (..))
+                                          TodoStatus (..), remindersFromList)
 
 instance ToJSON Reminder where
   toJSON (Reminder n id' b s) = object ["name" .= name, "body" .= b, "completed" .= status]
-    where name = unpack n ++ " |" ++ unpack id'
+    where name = n <> " |" <> id'
           status = Done `elem` s
 
-
   toEncoding (Reminder n id' b s) = pairs ("name" .= name <> "body" .= b <> "completed" .= status)
-    where name = unpack n ++ " |" ++ unpack id'
+    where name = n <> " |" <> id'
           status = Done `elem` s
 
 execute :: MonadIO m => String -> m Text
@@ -56,7 +55,7 @@ list = do
           var rems = [].slice.call(r.defaultList.reminders)
           rems.map(reminder => reminder.name())|]
   return $
-    fromList . fmap make $
+    remindersFromList . fmap make $
     Prelude.filter (\it -> length it > 1) $
     splitOn "|" . strip <$> Data.Text.split (== ',') out
   where
@@ -96,9 +95,9 @@ updateMany rems =
                         }
                     }|]
 
-asJSObject :: Reminders -> ByteString
+asJSObject :: Foldable m => m Reminder -> ByteString
 asJSObject rems =
-  encode . MS.fromList $ (,) <$> (unpack . todoId) <*> id <$> toList rems
+  encode . MS.fromList $ (,) <$> todoId <*> id <$> toList rems
 
 runAppleScript :: Command x -> IO x
 runAppleScript (Pure r)                 = return r
