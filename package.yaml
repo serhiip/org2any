@@ -24,7 +24,6 @@ dependencies:
 - free == 5.1
 - optparse-applicative == 0.14.3.0
 - typed-process == 0.2.4.0
-- interpolate == 0.2.0
 - bytestring
 - text == 1.2.3.1
 - orgmode-parse == 0.3.0
