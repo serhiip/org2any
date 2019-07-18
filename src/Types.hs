@@ -36,4 +36,3 @@ type Reminders = Set Reminder
 
 remindersFromList :: [Reminder] -> Reminders
 remindersFromList = fromList
-
