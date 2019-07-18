@@ -1,3 +1,6 @@
 [submodule "orgmode-parse"]
 	path = orgmode-parse
 	url = https://github.com/ixmatus/orgmode-parse.git
+[submodule "hfsnotify"]
+	path = hfsnotify
+	url = https://github.com/haskell-fswatch/hfsnotify.git
