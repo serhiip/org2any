@@ -1,6 +1,5 @@
 module Args
-  ( actionParser
-  , Args(..)
+  ( Args(..)
   , Action(..)
   , arguments
   , execParser
@@ -21,9 +20,6 @@ watchOpt = switch (long "watch" <> short 'w' <> help "Watch file changes and exe
 fileArg :: Parser FilePath
 fileArg = argument str (metavar "FILEPATH")
 
-addParser :: Parser Action
-addParser = Add <$> argument str (metavar "REMINDER")
-
 syncParser :: Parser Action
 syncParser = Sync <$> fileArg <*> watchOpt
 
@@ -31,11 +27,6 @@ data Args = Args
   { action :: Action
   }
 
-actionParser :: Parser Args
-actionParser = Args <$> hsubparser
-  (  command "add"  (info addParser (progDesc "Create new reminder"))
-  <> command "sync" (info syncParser (progDesc "Synchronize items from spcified file"))
-  )
-
 arguments :: ParserInfo Args
-arguments = info (actionParser <**> helper) (fullDesc <> progDesc "Add new reminder" <> header "Reminders helper")
+arguments = info (Args <$> syncParser <**> helper)
+                 (fullDesc <> progDesc "Sync org file with MacOS Reminders" <> header "Reminders helper")
