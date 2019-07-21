@@ -1,3 +1,6 @@
+{-# LANGUAGE NoImplicitPrelude #-}
+
+
 module Args
   ( Args(..)
   , Action(..)
@@ -6,6 +9,7 @@ module Args
   )
 where
 
+import           Universum
 import           Options.Applicative
 
 data Action

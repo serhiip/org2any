@@ -1,3 +1,4 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -10,10 +11,12 @@ module AppleScript.Internal
   )
 where
 
+import           Universum
 import           Types                          ( Reminders
                                                 , Reminder(..)
                                                 , TodoStatus(..)
                                                 , remindersFromList
+                                                , remindersToMapping
                                                 )
 import           Data.Aeson                     ( ToJSON(..)
                                                 , object
@@ -22,41 +25,35 @@ import           Data.Aeson                     ( ToJSON(..)
                                                 , encode
                                                 )
 
-import           Data.ByteString.Lazy           ( ByteString
-                                                , toStrict
-                                                )
-
-import qualified Data.Map.Strict               as MS
-import           Data.Text.Encoding             ( decodeUtf8 )
 import           Data.Text                      ( Text
                                                 , split
                                                 , splitOn
                                                 , strip
                                                 , unpack
                                                 )
-import           Data.Foldable                  ( toList )
 
+import qualified Data.ByteString.Lazy          as BSL
 
 
 instance ToJSON Reminder where
   toJSON (Reminder n id' b s) = object ["name" .= name, "body" .= b, "completed" .= status]
     where name = n <> " |" <> id'
-          status = Done `elem` s
+          status = maybe False (== Done) s
 
   toEncoding (Reminder n id' b s) = pairs ("name" .= name <> "body" .= b <> "completed" .= status)
     where name = n <> " |" <> id'
-          status = Done `elem` s
+          status = maybe False (== Done) s
 
-encodeUtf8 :: ByteString -> String
-encodeUtf8 = unpack . decodeUtf8 . toStrict
+asStr :: BSL.ByteString -> String
+asStr = unpack . decodeUtf8
 
-asJSObject :: Foldable m => m Reminder -> String
-asJSObject rems = encodeUtf8 . encode . MS.fromList $ (,) <$> todoId <*> id <$> toList rems
+asJSObject :: Reminders -> String
+asJSObject = asStr . encode . remindersToMapping
 
 createManyScript :: Reminders -> String
 createManyScript rems =
   "app = Application(\"Reminders\"); \n"
-    <> concatMap (\n -> "app.defaultList.reminders.push(app.Reminder(" <> (encodeUtf8 . encode) n <> "));") rems
+    <> concatMap (\n -> "app.defaultList.reminders.push(app.Reminder(" <> (asStr . encode) n <> "));") rems
 
 listAllScript :: String
 listAllScript
@@ -101,12 +98,7 @@ updateManyScript reminders =
 
 decodeRemindersList :: Text -> Reminders
 decodeRemindersList t =
-  remindersFromList
-    .   fmap make
-    $   Prelude.filter (\it -> length it > 1)
-    $   splitOn "|"
-    .   strip
-    <$> Data.Text.split (== ',') t
+  remindersFromList . fmap make $ filter (\it -> length it > 1) $ splitOn "|" . strip <$> Data.Text.split (== ',') t
  where
   make item = case item of
     (name : id' : _) -> Reminder name id' "a" (pure Todo)

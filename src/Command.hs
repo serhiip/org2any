@@ -1,3 +1,5 @@
+{-# LANGUAGE NoImplicitPrelude #-}
+
 module Command
   ( Reminders
   , CommandF(..)
@@ -12,19 +14,19 @@ module Command
   )
 where
 
+import           Universum
 import           Control.Monad.Free
-import           Data.Set
-import           Prelude                 hiding ( filter )
+import qualified Data.Set                      as S
 import           Types
 
 data CommandF x =
-  All (Reminders -> x)
+  GetAll (Reminders -> x)
   | CreateMany Reminders x
   | DeleteMany Reminders x
   | UpdateAll Reminders x
 
 instance Functor CommandF where
-  fmap f (All f')          = All (f . f')
+  fmap f (GetAll f')          = GetAll (f . f')
   fmap f (CreateMany rs x) = CreateMany rs (f x)
   fmap f (DeleteMany rs x) = DeleteMany rs (f x)
   fmap f (UpdateAll rs x)  = UpdateAll rs (f x)
@@ -32,18 +34,18 @@ instance Functor CommandF where
 type Command = Free CommandF
 
 list :: Command Reminders
-list = liftF $ All id
+list = liftF $ GetAll id
 
 create :: Reminder -> Command ()
-create = createMany . singleton
+create = createMany . S.singleton
 
 createMany :: Reminders -> Command ()
 createMany rs = do
   existing <- list
-  liftF $ CreateMany (filter (not . flip elem existing) rs) ()
+  liftF $ CreateMany (S.filter (not . flip elem existing) rs) ()
 
 del :: Reminder -> Command ()
-del = delMany . singleton
+del = delMany . S.singleton
 
 delMany :: Reminders -> Command ()
 delMany = liftF . flip DeleteMany ()
@@ -54,8 +56,8 @@ updateMany = liftF . flip UpdateAll ()
 sync :: Reminders -> Command ()
 sync toSync = do
   existing <- list
-  let (updates, creations) = partition (`elem` existing) toSync
-      deletions            = filter (`notElem` toSync) existing
+  let (updates, creations) = S.partition (`elem` existing) toSync
+      deletions            = S.filter (`notElem` toSync) existing
 
   updateMany updates
   delMany deletions
@@ -64,7 +66,7 @@ sync toSync = do
 
 runDry :: Command x -> IO x
 runDry (Pure r                ) = return r
-runDry (Free (All f          )) = putStrLn "would list all" >> mempty >>= runDry . f
+runDry (Free (GetAll f       )) = putStrLn "would list all" >> mempty >>= runDry . f
 runDry (Free (CreateMany rs x)) = putStrLn ("would create " ++ show rs) >> runDry x
 runDry (Free (DeleteMany rs x)) = putStrLn ("would delete " ++ show rs) >> runDry x
 runDry (Free (UpdateAll  rs x)) = putStrLn ("would delete " ++ show rs) >> runDry x

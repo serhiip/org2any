@@ -1,3 +1,5 @@
+{-# LANGUAGE NoImplicitPrelude #-}
+
 module Parser
   ( titles
   , doc
@@ -5,6 +7,8 @@ module Parser
   , reminders
   )
 where
+
+import           Universum
 
 import qualified Data.Attoparsec.Text          as A
 import           Data.Bifunctor                 ( bimap )
@@ -18,8 +22,6 @@ import           Types                          ( Reminder(..)
                                                 , TodoStatus(..)
                                                 )
 import           Data.Monoid                    ( mconcat )
-
-import           Debug.Trace                    ( traceShowId )
 
 newtype Org = Org
   { doc :: O.Document
@@ -35,7 +37,7 @@ newtype Title = Title {text :: T.Text} deriving Show
 
 titles :: (Applicative m, Monoid (m Reminder)) => O.Headline -> m Reminder
 titles item = pure (Reminder (O.title item) (rid item) (T.pack . show $ lookupBody item) status)
-  <> mconcat (titles <$> (traceShowId . O.subHeadlines) item)
+  <> mconcat (titles <$> O.subHeadlines item)
  where
   rid        = lookupId . O.unProperties . O.sectionProperties . O.section
   lookupId   = lookupDefault (T.pack "noid") (T.pack "CUSTOM_ID")

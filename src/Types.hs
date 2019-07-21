@@ -1,16 +1,23 @@
+{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE TypeApplications #-}
+
 module Types
   ( Reminder(..)
   , Reminders
   , TodoStatus(..)
   , remindersFromList
+  , remindersToMapping
   )
 where
+
+import Universum
 
 import           Data.Function                  ( on )
 import qualified Data.Text                     as T
 import           Data.Set                       ( fromList
                                                 , Set
                                                 )
+import qualified Data.Map.Strict               as MS
 
 data TodoStatus
   = Todo
@@ -36,3 +43,7 @@ type Reminders = Set Reminder
 
 remindersFromList :: [Reminder] -> Reminders
 remindersFromList = fromList
+
+remindersToMapping :: Reminders -> MS.Map T.Text Reminder
+remindersToMapping rems =
+  MS.fromList $ (,) <$> todoId <*> id <$> toList @(Set Reminder) rems

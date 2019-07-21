@@ -36,7 +36,7 @@ instance Arbitrary Reminder where
 
 eval :: Reminders -> Command x -> (Reminders, x)
 eval rems (Pure r                  ) = (rems, r)
-eval rems (Free (All f            )) = eval rems . f $ rems
+eval rems (Free (GetAll f         )) = eval rems . f $ rems
 eval rems (Free (CreateMany rs   x)) = eval (rs <> rems) x
 eval rems (Free (DeleteMany rs   x)) = let rems' = filter (not . (`elem` rs)) rems in eval rems' x
 eval rems (Free (UpdateAll  upds x)) = eval (upds `union` rems) x
