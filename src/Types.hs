@@ -1,5 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 
 module Types
   ( Reminder(..)
@@ -7,10 +8,13 @@ module Types
   , TodoStatus(..)
   , remindersFromList
   , remindersToMapping
+  , O2AM(..)
+  , runO2AM
+  , SyncConfig(..)
   )
 where
 
-import Universum
+import           Universum
 
 import           Data.Function                  ( on )
 import qualified Data.Text                     as T
@@ -18,6 +22,10 @@ import           Data.Set                       ( fromList
                                                 , Set
                                                 )
 import qualified Data.Map.Strict               as MS
+
+data SyncConfig = SyncConfig
+      { configVorbose :: Bool
+      }
 
 data TodoStatus
   = Todo
@@ -45,5 +53,11 @@ remindersFromList :: [Reminder] -> Reminders
 remindersFromList = fromList
 
 remindersToMapping :: Reminders -> MS.Map T.Text Reminder
-remindersToMapping rems =
-  MS.fromList $ (,) <$> todoId <*> id <$> toList @(Set Reminder) rems
+remindersToMapping rems = MS.fromList $ (,) <$> todoId <*> id <$> toList @(Set Reminder) rems
+
+newtype O2AM a = O2AM
+  { getO2AM :: ReaderT SyncConfig IO a
+  } deriving (Functor, Applicative, Monad, MonadIO)
+
+runO2AM :: MonadIO m => SyncConfig -> O2AM a -> m a
+runO2AM config a = liftIO $ runReaderT (getO2AM a) config

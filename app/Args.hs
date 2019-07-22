@@ -13,8 +13,7 @@ import           Universum
 import           Options.Applicative
 
 data Action
-  = Add { reminderText :: String }
-  | Sync { filePath :: FilePath
+  = Sync { filePath :: FilePath
          , watch    :: Bool }
   deriving (Show)
 
