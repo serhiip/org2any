@@ -11,6 +11,7 @@ module Types
   , O2AM(..)
   , runO2AM
   , SyncConfig(..)
+  , Verbosity(..)
   )
 where
 
@@ -23,8 +24,11 @@ import           Data.Set                       ( fromList
                                                 )
 import qualified Data.Map.Strict               as MS
 
+data Verbosity = Normal | Verbose
+
 data SyncConfig = SyncConfig
-      { configVorbose :: Bool
+      { configVorbose :: Verbosity
+      , configThreadPerEvent :: Bool
       }
 
 data TodoStatus
