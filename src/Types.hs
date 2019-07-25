@@ -61,7 +61,7 @@ remindersToMapping rems = MS.fromList $ (,) <$> todoId <*> id <$> toList @(Set R
 
 newtype O2AM a = O2AM
   { getO2AM :: ReaderT SyncConfig IO a
-  } deriving (Functor, Applicative, Monad, MonadIO)
+  } deriving (Functor, Applicative, Monad, MonadIO, MonadReader SyncConfig)
 
 runO2AM :: MonadIO m => SyncConfig -> O2AM a -> m a
 runO2AM config a = liftIO $ runReaderT (getO2AM a) config

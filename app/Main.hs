@@ -23,18 +23,22 @@ import           Prelude                        ( getChar )
 
 main :: IO ()
 main = do
-  (Args (Sync path toWatch) config) <- execParser arguments
+  (Args (Sync path toWatch) conf) <- execParser arguments
 
-  runO2AM config $ do
+  runO2AM conf $ do
 
     syncFile path
 
-    when toWatch $ liftIO . withManagerConf defaultConfig { confThreadPerEvent = True } $ \mgr -> do
+    threadPerEvent <- reader configThreadPerEvent
+
+    let managerConf = defaultConfig { confThreadPerEvent = threadPerEvent }
+
+    when toWatch $ liftIO . withManagerConf managerConf $ \mgr -> do
       canonPath <- canonicalizePath path
 
       let dir          = takeDirectory path
           shouldUpdate = equalFilePath canonPath . eventPath
-          onChange     = runO2AM config . const (syncFile path)
+          onChange     = runO2AM conf . const (syncFile path)
       stop <- watchDir mgr dir shouldUpdate onChange
       putStrLn "📝 Listening for changes... Press any key to stop"
       _ <- getChar
