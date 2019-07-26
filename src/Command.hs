@@ -1,4 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Command
   ( Reminders
@@ -20,16 +21,16 @@ import qualified Data.Set                      as S
 import           Types
 
 data CommandF x =
-  GetAll (Reminders -> x)
-  | CreateMany Reminders x
-  | DeleteMany Reminders x
-  | UpdateAll Reminders x
+  GetAll {cont :: Reminders -> x}
+  | CreateMany {rs :: Reminders, x :: x}
+  | DeleteMany {rs :: Reminders, x :: x}
+  | UpdateAll {rs :: Reminders, x :: x}
 
 instance Functor CommandF where
   fmap f (GetAll f')          = GetAll (f . f')
-  fmap f (CreateMany rs x) = CreateMany rs (f x)
-  fmap f (DeleteMany rs x) = DeleteMany rs (f x)
-  fmap f (UpdateAll rs x)  = UpdateAll rs (f x)
+  fmap f CreateMany {..} = CreateMany rs (f x)
+  fmap f DeleteMany {..} = DeleteMany rs (f x)
+  fmap f UpdateAll {..}  = UpdateAll rs (f x)
 
 type Command = Free CommandF
 

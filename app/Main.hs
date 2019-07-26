@@ -2,7 +2,7 @@
 
 module Main where
 
-import           AppleScript                    ( runAppleScript )
+import           AppleScript                    ( evalAppleScript )
 import           Args                           ( Action(..)
                                                 , Args(..)
                                                 , arguments
@@ -47,7 +47,7 @@ main = do
     parseResult <- runParser <$> readFile path
 
     whenLeft parseResult putStr
-    whenRight parseResult $ liftIO . runAppleScript . sync . reminders
+    whenRight parseResult $ evalAppleScript . sync . reminders
 
   watchFile path conf mgr = do
     canonicalPath <- canonicalizePath path

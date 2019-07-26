@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wno-orphans -Wno-missing-signatures #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module LibSpec
   ( spec
@@ -35,11 +36,11 @@ instance Arbitrary Reminder where
   arbitrary = Reminder <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 eval :: Reminders -> Command x -> (Reminders, x)
-eval rems (Pure r                  ) = (rems, r)
-eval rems (Free (GetAll f         )) = eval rems . f $ rems
-eval rems (Free (CreateMany rs   x)) = eval (rs <> rems) x
-eval rems (Free (DeleteMany rs   x)) = let rems' = filter (not . (`elem` rs)) rems in eval rems' x
-eval rems (Free (UpdateAll  upds x)) = eval (upds `union` rems) x
+eval rems (Pure r              ) = (rems, r)
+eval rems (Free (GetAll f)     ) = eval rems . f $ rems
+eval rems (Free CreateMany {..}) = eval (rs <> rems) x
+eval rems (Free DeleteMany {..}) = let rems' = filter (not . (`elem` rs)) rems in eval rems' x
+eval rems (Free UpdateAll {..} ) = eval (rs `union` rems) x
 
 run = fst . uncurry eval
 
