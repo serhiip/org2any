@@ -25,7 +25,7 @@ main :: IO ()
 main = do
   (Args (Sync path toWatch) conf) <- execParser arguments
 
-  runO2AM conf $ do
+  runResult                       <- runO2AM conf $ do
 
     syncFile path
 
@@ -33,19 +33,28 @@ main = do
 
     let managerConf = defaultConfig { confThreadPerEvent = threadPerEvent }
 
-    when toWatch $ liftIO . withManagerConf managerConf $ \mgr -> do
-      canonPath <- canonicalizePath path
+    when toWatch
+      .  liftIO
+      $  withManagerConf managerConf (watchFile path conf)
+      >> putStrLn "📝 Listening for changes... Press any key to stop"
+      >> getChar
+      >> print "c ya!"
 
-      let dir          = takeDirectory path
-          shouldUpdate = equalFilePath canonPath . eventPath
-          onChange     = runO2AM conf . const (syncFile path)
-      stop <- watchDir mgr dir shouldUpdate onChange
-      putStrLn "📝 Listening for changes... Press any key to stop"
-      _ <- getChar
-      stop
+  whenLeft runResult print
  where
-  syncFile path = do
-    parsed <- runParser <$> readFile path
 
-    whenLeft parsed putStr
-    whenRight parsed $ liftIO . runAppleScript . sync . reminders
+  syncFile path = do
+    parseResult <- runParser <$> readFile path
+
+    whenLeft parseResult putStr
+    whenRight parseResult $ liftIO . runAppleScript . sync . reminders
+
+  watchFile path conf mgr = do
+    canonicalPath <- canonicalizePath path
+
+    let dir          = takeDirectory canonicalPath
+        shouldUpdate = equalFilePath canonicalPath . eventPath
+        onChange _ = do
+          syncResult <- runO2AM conf $ syncFile path
+          whenLeft syncResult print
+    watchDir mgr dir shouldUpdate onChange

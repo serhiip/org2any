@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Types
   ( Reminder(..)
@@ -12,6 +12,7 @@ module Types
   , runO2AM
   , SyncConfig(..)
   , Verbosity(..)
+  , SyncError(..)
   )
 where
 
@@ -30,6 +31,8 @@ data SyncConfig = SyncConfig
       { configVorbose :: Verbosity
       , configThreadPerEvent :: Bool
       }
+
+data SyncError = SysCallError deriving (Show)
 
 data TodoStatus
   = Todo
@@ -60,8 +63,14 @@ remindersToMapping :: Reminders -> MS.Map T.Text Reminder
 remindersToMapping rems = MS.fromList $ (,) <$> todoId <*> id <$> toList @(Set Reminder) rems
 
 newtype O2AM a = O2AM
-  { getO2AM :: ReaderT SyncConfig IO a
-  } deriving (Functor, Applicative, Monad, MonadIO, MonadReader SyncConfig)
+  { getO2AM :: ExceptT SyncError (ReaderT SyncConfig IO) a
+  } deriving
+  ( Functor
+  , Applicative
+  , Monad
+  , MonadIO
+  , MonadReader SyncConfig
+  )
 
-runO2AM :: MonadIO m => SyncConfig -> O2AM a -> m a
-runO2AM config a = liftIO $ runReaderT (getO2AM a) config
+runO2AM :: MonadIO m => SyncConfig -> O2AM a -> m (Either SyncError a)
+runO2AM config = liftIO . usingReaderT config . runExceptT . getO2AM
