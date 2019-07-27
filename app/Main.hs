@@ -1,4 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Main where
 
@@ -20,41 +21,45 @@ import           Types
 import           Universum
 import           Universum.Lifted.File          ( readFile )
 import           Prelude                        ( getChar )
+import           Logging
 
 main :: IO ()
 main = do
-  (Args (Sync path toWatch) conf) <- execParser arguments
+  args@(Args (Sync path toWatch) conf) <- execParser arguments
+  canonPath                            <- canonicalizePath path
 
-  runResult                       <- runO2AM conf $ do
+  result                               <- runO2AM conf $ do
 
-    syncFile path
+    logDebug $ "Arguments " <> show args
+
+    syncFile canonPath
 
     threadPerEvent <- reader configThreadPerEvent
 
     let managerConf = defaultConfig { confThreadPerEvent = threadPerEvent }
 
-    when toWatch
-      .  liftIO
-      $  withManagerConf managerConf (watchFile path conf)
-      >> putStrLn "📝 Listening for changes... Press any key to stop"
-      >> getChar
-      >> print "c ya!"
+    when toWatch $ liftIO . withManagerConf managerConf $ \mgr -> do
+      let dir          = takeDirectory path
+          shouldUpdate = equalFilePath canonPath . eventPath
+          onChange _ =
+            runO2AM conf (syncFile canonPath)
+              >>= (\case
+                    Left  err -> print err
+                    Right r   -> pure r
+                  )
+      stop <- watchDir mgr dir shouldUpdate onChange
+      putStrLn "📝 Listening for changes... Press any key to stop"
+      _ <- getChar
+      stop
 
-  whenLeft runResult print
+  case result of
+    (Left  err) -> print err
+    (Right re ) -> return re
  where
-
   syncFile path = do
+    logInfo $ "Processing " <> path
     parseResult <- runParser <$> readFile path
 
-    whenLeft parseResult putStr
+    whenLeft parseResult logError
     whenRight parseResult $ evalAppleScript . sync . reminders
-
-  watchFile path conf mgr = do
-    canonicalPath <- canonicalizePath path
-
-    let dir          = takeDirectory canonicalPath
-        shouldUpdate = equalFilePath canonicalPath . eventPath
-        onChange _ = do
-          syncResult <- runO2AM conf $ syncFile path
-          whenLeft syncResult print
-    watchDir mgr dir shouldUpdate onChange
+    logDebug "Done"

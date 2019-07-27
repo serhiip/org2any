@@ -39,7 +39,7 @@ configParser = SyncConfig <$> verboseOpt <*> crazyOpt
 data Args = Args
   { action :: Action
   , config :: SyncConfig
-  }
+  } deriving (Show)
 
 arguments :: ParserInfo Args
 arguments = info (Args <$> syncParser <*> configParser  <**> helper)

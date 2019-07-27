@@ -40,6 +40,8 @@ dependencies:
 - insert-ordered-containers == 0.2.1.0
 - universum == 1.5.0
 - mtl == 2.2.2
+- fast-logger == 2.4.13
+
 
 library:
   source-dirs: src

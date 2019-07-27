@@ -26,12 +26,12 @@ import           Data.Set                       ( fromList
 import qualified Data.Map.Strict               as MS
 import           Control.Monad.Except           ( MonadError(..) )
 
-data Verbosity = Normal | Verbose
+data Verbosity = Normal | Verbose deriving (Show, Eq)
 
 data SyncConfig = SyncConfig
-      { configVorbose :: Verbosity
+      { configVerbosity :: Verbosity
       , configThreadPerEvent :: Bool
-      }
+      } deriving (Show)
 
 data SyncError = SysCallError LByteString deriving (Show)
 
@@ -74,5 +74,5 @@ newtype O2AM a = O2AM
   , MonadError SyncError
   )
 
-runO2AM :: MonadIO m => SyncConfig -> O2AM a -> m (Either SyncError a)
-runO2AM config = liftIO . usingReaderT config . runExceptT . getO2AM
+runO2AM :: SyncConfig -> O2AM a -> IO (Either SyncError a)
+runO2AM config = usingReaderT config . runExceptT . getO2AM
