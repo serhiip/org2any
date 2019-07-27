@@ -24,6 +24,7 @@ import           Data.Set                       ( fromList
                                                 , Set
                                                 )
 import qualified Data.Map.Strict               as MS
+import           Control.Monad.Except           ( MonadError(..) )
 
 data Verbosity = Normal | Verbose
 
@@ -32,7 +33,7 @@ data SyncConfig = SyncConfig
       , configThreadPerEvent :: Bool
       }
 
-data SyncError = SysCallError deriving (Show)
+data SyncError = SysCallError LByteString deriving (Show)
 
 data TodoStatus
   = Todo
@@ -70,6 +71,7 @@ newtype O2AM a = O2AM
   , Monad
   , MonadIO
   , MonadReader SyncConfig
+  , MonadError SyncError
   )
 
 runO2AM :: MonadIO m => SyncConfig -> O2AM a -> m (Either SyncError a)

@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -15,33 +14,35 @@ import           Command                        ( Command
                                                 , CommandF(..)
                                                 )
 import           Control.Monad.Free             ( Free(..) )
-import           Control.Monad.IO.Class         ( MonadIO )
-
 
 import           Data.Text                      ( Text )
 import           System.Process.Typed           ( proc
-                                                , readProcessStdout_
+                                                , readProcess
                                                 )
 import           Types
 import           AppleScript.Internal
+import           System.Exit                    ( ExitCode(..) )
+import           Control.Monad.Except           ( throwError )
 
-execute :: MonadIO m => String -> m Text
+execute :: String -> O2AM Text
 execute script = do
-  outBS <- readProcessStdout_ $ proc "/usr/bin/osascript" args
-  return $ decodeUtf8 @Text @LByteString outBS
+  (exitCode, out, err) <- liftIO . readProcess $ proc "/usr/bin/osascript" args
+  if exitCode == ExitSuccess
+    then pure $ decodeUtf8 @Text @LByteString out
+    else throwError $ SysCallError err
   where args = ["-l", "JavaScript", "-e", script]
 
 evalAppleScript :: Command x -> O2AM x
 evalAppleScript (Pure r         ) = return r
 evalAppleScript (Free (GetAll f)) = do
-  reminders <- liftIO $ decodeRemindersList <$> execute listAllScript
+  reminders <- decodeRemindersList <$> execute listAllScript
   evalAppleScript . f $ reminders
 evalAppleScript (Free CreateMany {..}) = do
-  _ <- liftIO . execute . createManyScript $ rs
+  _ <- execute . createManyScript $ rs
   evalAppleScript x
 evalAppleScript (Free DeleteMany {..}) = do
-  _ <- liftIO . execute . deleteManyScript $ rs
+  _ <- execute . deleteManyScript $ rs
   evalAppleScript x
 evalAppleScript (Free UpdateAll {..}) = do
-  _ <- liftIO . execute . updateManyScript $ rs
+  _ <- execute . updateManyScript $ rs
   evalAppleScript x

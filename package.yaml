@@ -39,6 +39,7 @@ dependencies:
 - containers == 0.6.0.1
 - insert-ordered-containers == 0.2.1.0
 - universum == 1.5.0
+- mtl == 2.2.2
 
 library:
   source-dirs: src
