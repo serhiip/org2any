@@ -5,6 +5,7 @@ module Logging
   ( logDebug
   , logInfo
   , logError
+  , logInfo'
   )
 where
 
@@ -28,21 +29,24 @@ instance ToLogStr Severity where
 
 data Severity = Debug | Info | Error deriving (Show, Eq, Ord)
 
-logMessage :: (MonadIO m, ToLogStr a, MonadReader r m, r ~ SyncConfig) => Severity -> a -> m ()
-logMessage severity message = do
-  verbosity         <- reader configVerbosity
-  timeCache         <- liftIO $ newTimeCache simpleTimeFormat'
-  (logger, cleanUp) <- liftIO $ newTimedFastLogger timeCache (LogStdout 100)
+logMessage' :: ToLogStr a => Verbosity -> Severity -> a -> IO ()
+logMessage' verbosity severity message = do
+  timeCache         <- newTimeCache simpleTimeFormat'
+  (logger, cleanUp) <- newTimedFastLogger timeCache (LogStdout 100)
   liftIO $ when (canLog verbosity) $ logger
     (\time -> toLogStr time <> toLogStr " " <> toLogStr severity <> toLogStr " " <> toLogStr message <> toLogStr "\n")
   liftIO cleanUp
  where
   canLog verbosity = case (verbosity, severity) of
-    (Normal , Info ) -> True
-    (Verbose, Info ) -> True
-    (Normal , Debug) -> False
-    (Verbose, Debug) -> True
-    (_      , Error) -> True
+    (Normal, Debug) -> False
+    _               -> True
+
+logMessage :: (MonadIO m, ToLogStr a, MonadReader r m, r ~ SyncConfig) => Severity -> a -> m ()
+logMessage severity message = do
+  verbosity <- reader configVerbosity
+  liftIO $ logMessage' verbosity severity message
+
+logInfo' verbosity = logMessage' verbosity Info
 
 logDebug :: (MonadIO m, ToLogStr a, MonadReader r m, r ~ SyncConfig) => a -> m ()
 logDebug = logMessage Debug
@@ -52,3 +56,4 @@ logInfo = logMessage Info
 
 logError :: (MonadIO m, ToLogStr a, MonadReader r m, r ~ SyncConfig) => a -> m ()
 logError = logMessage Error
+

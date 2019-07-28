@@ -48,7 +48,7 @@ main = do
                     Right r   -> pure r
                   )
       stop <- watchDir mgr dir shouldUpdate onChange
-      putStrLn "📝 Listening for changes... Press any key to stop"
+      logInfo' (configVerbosity conf) "📝 Listening for changes... Press any key to stop"
       _ <- getChar
       stop
 
