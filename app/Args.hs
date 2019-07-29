@@ -24,8 +24,12 @@ watchOpt = switch (long "watch" <> short 'w' <> help "Watch file changes and exe
 verboseOpt :: Parser Verbosity
 verboseOpt = flag Normal Verbose (short 'v' <> help "Log additional information to stdout")
 
+quietOpt :: Parser Verbosity
+quietOpt = flag' Quiet (long "quiet" <> short 'q' <> help "Dont log any information to stdout")
+
 crazyOpt :: Parser Bool
-crazyOpt = switch (long "crazy" <> short 'c' <> help "Create parallel threads to handle individual file updates (causes errors now)")
+crazyOpt = switch
+  (long "crazy" <> short 'c' <> help "Create parallel threads to handle individual file updates (causes errors now)")
 
 fileArg :: Parser FilePath
 fileArg = argument str (metavar "FILEPATH")
@@ -34,7 +38,7 @@ syncParser :: Parser Action
 syncParser = Sync <$> fileArg <*> watchOpt
 
 configParser :: Parser SyncConfig
-configParser = SyncConfig <$> verboseOpt <*> crazyOpt
+configParser = SyncConfig <$> (verboseOpt <|> quietOpt) <*> crazyOpt
 
 data Args = Args
   { action :: Action
@@ -42,5 +46,5 @@ data Args = Args
   } deriving (Show)
 
 arguments :: ParserInfo Args
-arguments = info (Args <$> syncParser <*> configParser  <**> helper)
+arguments = info (Args <$> syncParser <*> configParser <**> helper)
                  (fullDesc <> progDesc "Sync org file with MacOS Reminders" <> header "Reminders helper")

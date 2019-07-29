@@ -27,14 +27,18 @@ main :: IO ()
 main = do
   args@(Args (Sync path toWatch) conf) <- execParser arguments
   canonPath                            <- canonicalizePath path
+  (stdout, stderr, cleanUp)            <- initLogging
 
-  result                               <- runO2AM conf $ do
+  let loggers   = (stdout, stderr)
+      bootstrap = Bootstrapped conf loggers
+
+  result <- runO2AM bootstrap $ do
 
     logDebug $ "Arguments " <> show args
 
     syncFile canonPath
 
-    threadPerEvent <- reader configThreadPerEvent
+    threadPerEvent <- reader (configThreadPerEvent . bootstrappedConfig)
 
     let managerConf = defaultConfig { confThreadPerEvent = threadPerEvent }
 
@@ -42,18 +46,18 @@ main = do
       let dir          = takeDirectory path
           shouldUpdate = equalFilePath canonPath . eventPath
           onChange _ =
-            runO2AM conf (syncFile canonPath)
+            runO2AM bootstrap (syncFile canonPath)
               >>= (\case
-                    Left  err -> print err
+                    Left  err -> logError' loggers (configVerbosity conf) err
                     Right r   -> pure r
                   )
       stop <- watchDir mgr dir shouldUpdate onChange
-      logInfo' (configVerbosity conf) "📝 Listening for changes... Press any key to stop"
+      logInfo' loggers (configVerbosity conf) "📝 Listening for changes... Press any key to stop"
       _ <- getChar
-      stop
+      stop >> cleanUp
 
   case result of
-    (Left  err) -> print err
+    (Left  err) -> logError' loggers (configVerbosity conf) err
     (Right re ) -> return re
  where
   syncFile path = do

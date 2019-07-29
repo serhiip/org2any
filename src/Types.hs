@@ -13,6 +13,7 @@ module Types
   , SyncConfig(..)
   , Verbosity(..)
   , SyncError(..)
+  , Bootstrapped(..)
   )
 where
 
@@ -25,13 +26,19 @@ import           Data.Set                       ( fromList
                                                 )
 import qualified Data.Map.Strict               as MS
 import           Control.Monad.Except           ( MonadError(..) )
+import           System.Log.FastLogger          ( TimedFastLogger )
 
-data Verbosity = Normal | Verbose deriving (Show, Eq)
+data Verbosity = Normal | Verbose | Quiet deriving (Show, Eq)
 
 data SyncConfig = SyncConfig
       { configVerbosity :: Verbosity
       , configThreadPerEvent :: Bool
       } deriving (Show)
+
+data Bootstrapped = Bootstrapped
+  { bootstrappedConfig :: SyncConfig
+  , bootstrappedLoggers :: (TimedFastLogger, TimedFastLogger)
+  }
 
 data SyncError = SysCallError LByteString deriving (Show)
 
@@ -64,15 +71,15 @@ remindersToMapping :: Reminders -> MS.Map T.Text Reminder
 remindersToMapping rems = MS.fromList $ (,) <$> todoId <*> id <$> toList @(Set Reminder) rems
 
 newtype O2AM a = O2AM
-  { getO2AM :: ExceptT SyncError (ReaderT SyncConfig IO) a
+  { getO2AM :: ExceptT SyncError (ReaderT Bootstrapped IO) a
   } deriving
   ( Functor
   , Applicative
   , Monad
   , MonadIO
-  , MonadReader SyncConfig
+  , MonadReader Bootstrapped
   , MonadError SyncError
   )
 
-runO2AM :: SyncConfig -> O2AM a -> IO (Either SyncError a)
+runO2AM :: Bootstrapped -> O2AM a -> IO (Either SyncError a)
 runO2AM config = usingReaderT config . runExceptT . getO2AM
