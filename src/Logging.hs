@@ -33,6 +33,7 @@ instance ToLogStr Severity where
 
 instance ToLogStr SyncError where
   toLogStr (SysCallError bs) = toLogStr bs
+  toLogStr (NoItemsError path) = toLogStr "No org items found to import in " <> show path
 
 data Severity = Debug | Info | Error deriving (Show, Eq, Ord)
 

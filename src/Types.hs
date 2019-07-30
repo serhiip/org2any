@@ -40,7 +40,7 @@ data Bootstrapped = Bootstrapped
   , bootstrappedLoggers :: (TimedFastLogger, TimedFastLogger)
   }
 
-data SyncError = SysCallError LByteString deriving (Show)
+data SyncError = SysCallError LByteString | NoItemsError FilePath deriving (Show)
 
 data TodoStatus
   = Todo

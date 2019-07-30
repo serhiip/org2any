@@ -1,5 +1,4 @@
 {-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE LambdaCase #-}
 
 module Main where
 
@@ -21,15 +20,17 @@ import           Types
 import           Universum
 import           Universum.Lifted.File          ( readFile )
 import           Prelude                        ( getChar )
+import           Control.Monad.Except           ( throwError )
 import           Logging
 
 main :: IO ()
 main = do
   args@(Args (Sync path toWatch) conf) <- execParser arguments
   canonPath                            <- canonicalizePath path
-  (stdout, stderr, cleanUp)            <- initLogging
+  (stdoutLogger, stderrLogger, loggingCleanUp)            <- initLogging
 
-  let loggers   = (stdout, stderr)
+  let loggers   = (stdoutLogger, stderrLogger)
+      verbosity = configVerbosity conf
       bootstrap = Bootstrapped conf loggers
 
   result <- runO2AM bootstrap $ do
@@ -45,25 +46,27 @@ main = do
     when toWatch $ liftIO . withManagerConf managerConf $ \mgr -> do
       let dir          = takeDirectory path
           shouldUpdate = equalFilePath canonPath . eventPath
-          onChange _ =
-            runO2AM bootstrap (syncFile canonPath)
-              >>= (\case
-                    Left  err -> logError' loggers (configVerbosity conf) err
-                    Right r   -> pure r
-                  )
+          onChange _ = do
+            result <- runO2AM bootstrap (syncFile canonPath)
+            whenLeft result $ logError' loggers verbosity
+            whenRight result pure
       stop <- watchDir mgr dir shouldUpdate onChange
       logInfo' loggers (configVerbosity conf) "📝 Listening for changes... Press any key to stop"
       _ <- getChar
-      stop >> cleanUp
+      stop >> loggingCleanUp
 
-  case result of
-    (Left  err) -> logError' loggers (configVerbosity conf) err
-    (Right re ) -> return re
+  whenLeft result $ logError' loggers verbosity
+  whenRight result return
  where
+  syncFile :: FilePath -> O2AM ()
   syncFile path = do
     logInfo $ "Processing " <> path
-    parseResult <- runParser <$> readFile path
+    parsed <- runParser <$> readFile path
 
-    whenLeft parseResult logError
-    whenRight parseResult $ evalAppleScript . sync . reminders
+    whenLeft parsed logError
+    whenRight parsed (\orgTree ->
+                        let items = reminders orgTree
+                        in if length items == 0
+                           then throwError (NoItemsError path)
+                           else evalAppleScript . sync $ items)
     logDebug "Done"
