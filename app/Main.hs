@@ -27,7 +27,7 @@ main :: IO ()
 main = do
   args@(Args (Sync path toWatch) conf) <- execParser arguments
   canonPath                            <- canonicalizePath path
-  (stdoutLogger, stderrLogger, loggingCleanUp)            <- initLogging
+  (stdoutLogger, stderrLogger, loggingCleanUp) <- initLogging
 
   let loggers   = (stdoutLogger, stderrLogger)
       verbosity = configVerbosity conf
@@ -64,9 +64,10 @@ main = do
     parsed <- runParser <$> readFile path
 
     whenLeft parsed logError
-    whenRight parsed (\orgTree ->
-                        let items = reminders orgTree
-                        in if length items == 0
-                           then throwError (NoItemsError path)
-                           else evalAppleScript . sync $ items)
+    whenRight
+      parsed
+      (\orgTree ->
+        let items = reminders orgTree
+        in  if length items == 0 then throwError (NoItemsError path) else evalAppleScript . sync $ items
+      )
     logDebug "Done"
