@@ -38,11 +38,11 @@ import qualified Data.ByteString.Lazy          as BSL
 instance ToJSON Reminder where
   toJSON (Reminder n id' b s) = object ["name" .= name, "body" .= b, "completed" .= status]
     where name = n <> " |" <> id'
-          status = maybe False (== Done) s
+          status = Just Done == s
 
   toEncoding (Reminder n id' b s) = pairs ("name" .= name <> "body" .= b <> "completed" .= status)
     where name = n <> " |" <> id'
-          status = maybe False (== Done) s
+          status = Just Done == s
 
 asStr :: BSL.ByteString -> String
 asStr = unpack . decodeUtf8

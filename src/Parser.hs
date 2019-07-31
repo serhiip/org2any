@@ -36,12 +36,15 @@ runParser = bimap verboseError Org . A.parseOnly parser
 newtype Title = Title {text :: T.Text} deriving Show
 
 titles :: (Applicative m, Monoid (m Reminder)) => O.Headline -> m Reminder
-titles item = pure (Reminder (O.title item) (rid item) (T.pack . show $ lookupBody item) status)
+titles item = pure (Reminder (O.title item) (rid item) (lookupBody item) status)
   <> mconcat (titles <$> O.subHeadlines item)
  where
   rid        = lookupId . O.unProperties . O.sectionProperties . O.section
   lookupId   = lookupDefault (T.pack "noid") (T.pack "CUSTOM_ID")
-  lookupBody = O.sectionContents . O.section
+  lookupBody headline = case (O.sectionContents . O.section) headline of
+    [O.Paragraph [O.Plain text]] -> text
+    _ -> T.pack "Org item body type is not supported"
+
   status     = O.stateKeyword item >>= mkStatus . T.unpack . O.unStateKeyword
   mkStatus st = case st of
     "DONE" -> Just Done
