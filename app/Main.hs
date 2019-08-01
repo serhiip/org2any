@@ -53,10 +53,10 @@ main = do
       stop <- watchDir mgr dir shouldUpdate onChange
       logInfo' loggers (configVerbosity conf) "📝 Listening for changes... Press any key to stop"
       _ <- getChar
-      stop >> loggingCleanUp
+      stop
 
   whenLeft result $ logError' loggers verbosity
-  whenRight result return
+  loggingCleanUp
  where
   syncFile :: FilePath -> O2AM ()
   syncFile path = do
