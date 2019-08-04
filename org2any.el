@@ -5,6 +5,11 @@
 
 ;;; Code:
 
+(defcustom org2any/executable-path "org2any"
+  "Path to org2any executable."
+  :type '(file :must-match t)
+  :group 'org2any)
+
 (defvar org2any/running-processes)
 (setq org2any/running-processes '())
 
@@ -13,7 +18,7 @@
   (when (and (string= (file-name-nondirectory (buffer-file-name)) "test.org")
 	     (not (assoc (current-buffer) org2any/running-processes)))
     (let ((org2any-process
-	   (start-process "org2any" "*org2any log*" "org2any" (buffer-file-name) "-v" "-w")))
+	   (start-process org2any/executable-path "*org2any log*" "org2any" (buffer-file-name) "-v" "-w")))
       (setq org2any/running-processes (cons `(,(current-buffer) . ,org2any-process) org2any/running-processes))
       (add-hook 'kill-buffer-hook 'org2any/teardown))
     (message "org2any started for %s" (buffer-name))))
