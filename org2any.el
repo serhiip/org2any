@@ -26,11 +26,11 @@
 (defun org2any/teardown ()
   "Send symbol to end watching Org file."
   (let ((process-opt (cdr (assoc (current-buffer) org2any/running-processes))))
-    (when process-opt
-      (kill-process process-opt)
-      (setq org2any/running-processes (assq-delete-all (current-buffer) org2any/running-processes))
-      (when (equal 0 (length org2any/running-processes))
-	(remove-hook 'kill-buffer-hook 'org2any/teardown)))))
+    (when (and process-opt (equal (process-status process-opt) 'run))
+      (kill-process process-opt))
+    (setq org2any/running-processes (assq-delete-all (current-buffer) org2any/running-processes))
+    (when (equal 0 (length org2any/running-processes))
+      (remove-hook 'kill-buffer-hook 'org2any/teardown))))
 
 (provide 'org2any)
 
