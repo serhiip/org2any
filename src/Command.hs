@@ -60,8 +60,8 @@ sync toSync = do
   let (updates, creations) = S.partition (`elem` existing) toSync
       deletions            = S.filter (`notElem` toSync) existing
 
-  updateMany updates
   delMany deletions
+  updateMany updates
   createMany creations
   pure ()
 
