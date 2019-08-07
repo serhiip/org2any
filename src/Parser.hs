@@ -43,7 +43,7 @@ titles item = pure (Reminder (O.title item) (rid item) (lookupBody item) status)
   lookupId   = lookupDefault (T.pack "noid") (T.pack "CUSTOM_ID")
   lookupBody headline = case (O.sectionContents . O.section) headline of
     [] -> T.empty
-    [O.Paragraph [O.Plain text]] -> text
+    [O.Paragraph [O.Plain txt]] -> txt
     _ -> T.pack "Org item body type is not supported"
 
   status     = O.stateKeyword item >>= mkStatus . T.unpack . O.unStateKeyword
