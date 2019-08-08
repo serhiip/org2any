@@ -9,11 +9,20 @@ import           Types
 remindersSpec :: Spec
 remindersSpec = describe "Reminders.App MacOS command generator" $ do
 
-  it "shoud list all reminders and map over them displaying the names only" $ do
+  it "shoud list all reminders, remove unwanted parts, and convert dates" $ do
     listAllScript
       `shouldBe` "var r = Application('Reminders'); \n\
-        \var rems = [].slice.call(r.defaultList.reminders); \n\
-        \rems.map(reminder => reminder.name())"
+                \var rems = r.defaultList.reminders(); \n\
+                \const res = rems.map(reminder => { \n\
+	            \const props = reminder.properties(); \n\
+	            \props['container'] = null; \n\
+	            \for (var property in props) \n\
+                        \if (props.hasOwnProperty(property)) \n\
+		            \if (props[property] && props[property].toISOString) \n\
+			        \props[property] = props[property].toISOString() \n\
+	            \return props \n\
+                \}) \n\
+                \JSON.stringify(res)"
 
   it "should create the reminders by pushing them to existing list of reminders" $ do
     (createManyScript . remindersFromList $ [Reminder "test" "test1" "test2" Nothing])

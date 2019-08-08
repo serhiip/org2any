@@ -15,7 +15,9 @@ import           Command                        ( Command
                                                 )
 import           Control.Monad.Free             ( Free(..) )
 
-import           Data.Text                      ( Text )
+import           Data.Text                      ( Text
+                                                , pack
+                                                )
 import           System.Process.Typed           ( proc
                                                 , readProcess
                                                 )
@@ -24,19 +26,19 @@ import           AppleScript.Internal
 import           System.Exit                    ( ExitCode(..) )
 import           Control.Monad.Except           ( throwError )
 
-execute :: String -> O2AM Text
+execute :: String -> O2AM LByteString
 execute script = do
   (exitCode, out, err) <- liftIO . readProcess $ proc "/usr/bin/osascript" args
-  if exitCode == ExitSuccess
-    then pure $ decodeUtf8 @Text @LByteString out
-    else throwError $ SysCallError err
+  if exitCode == ExitSuccess then pure out else throwError $ SysCallError err
   where args = ["-l", "JavaScript", "-e", script]
 
 evalAppleScript :: Command x -> O2AM x
 evalAppleScript (Pure r         ) = return r
 evalAppleScript (Free (GetAll f)) = do
   reminders <- decodeRemindersList <$> execute listAllScript
-  evalAppleScript . f $ reminders
+  case reminders of
+    Left  err  -> throwError . SysCallError $ encodeUtf8 @Text @LByteString (pack err)
+    Right rems -> evalAppleScript . f $ rems
 evalAppleScript (Free CreateMany {..}) = do
   _ <- execute . createManyScript $ rs
   evalAppleScript x

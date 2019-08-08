@@ -19,21 +19,23 @@ import           Types                          ( Reminders
                                                 , remindersToMapping
                                                 )
 import           Data.Aeson                     ( ToJSON(..)
+                                                , FromJSON(..)
                                                 , object
                                                 , pairs
                                                 , (.=)
+                                                , (.:)
+                                                , (.:?)
                                                 , encode
+                                                , withObject
+                                                , eitherDecode
                                                 )
 
-import           Data.Text                      ( Text
-                                                , split
-                                                , splitOn
+import           Data.Text                      ( splitOn
                                                 , strip
                                                 , unpack
                                                 )
 
-import qualified Data.ByteString.Lazy          as BSL
-
+import qualified AppleScript.Types             as A
 
 instance ToJSON Reminder where
   toJSON (Reminder n id' b s) = object ["name" .= name, "body" .= b, "completed" .= status]
@@ -44,7 +46,20 @@ instance ToJSON Reminder where
     where name = n <> " |" <> id'
           status = Just Done == s
 
-asStr :: BSL.ByteString -> String
+instance FromJSON A.Reminder where
+  parseJSON = withObject "Todo" $ \v -> A.Reminder
+    <$> v .:? "dueDate"
+    <*> v .:? "modificationDate"
+    <*> v .: "creationDate"
+    <*> v .:? "completionDate"
+    <*> v .:? "remindMeDate"
+    <*> v .: "body"
+    <*> v .: "completed"
+    <*> v .: "id"
+    <*> v .: "name"
+    <*> v .: "priority"
+
+asStr :: LByteString -> String
 asStr = unpack . decodeUtf8
 
 asJSObject :: Reminders -> String
@@ -58,8 +73,17 @@ createManyScript rems =
 listAllScript :: String
 listAllScript
   = "var r = Application('Reminders'); \n\
-                \var rems = [].slice.call(r.defaultList.reminders); \n\
-                \rems.map(reminder => reminder.name())"
+                \var rems = r.defaultList.reminders(); \n\
+                \const res = rems.map(reminder => { \n\
+	            \const props = reminder.properties(); \n\
+	            \props['container'] = null; \n\
+	            \for (var property in props) \n\
+                        \if (props.hasOwnProperty(property)) \n\
+		            \if (props[property] && props[property].toISOString) \n\
+			        \props[property] = props[property].toISOString() \n\
+	            \return props \n\
+                \}) \n\
+                \JSON.stringify(res)"
 
 deleteManyScript :: Reminders -> String
 deleteManyScript reminders =
@@ -95,11 +119,13 @@ updateManyScript reminders =
                      \} \n\
                    \}"
 
+decodeRemindersList :: LByteString -> Either String Reminders
+decodeRemindersList t = do
+  decoded <- eitherDecode t
+  let names = A.todoName <$> decoded
+      rems  = make . splitOn "|" <$> names
 
-decodeRemindersList :: Text -> Reminders
-decodeRemindersList t =
-  remindersFromList . fmap make $ filter (\it -> length it > 1) $ splitOn "|" . strip <$> Data.Text.split (== ',') t
+  return $ remindersFromList rems
  where
-  make item = case item of
-    (name : id' : _) -> Reminder name id' "a" (pure Todo)
-    _                -> error "should not happen"
+  make (name : id' : _) = Reminder (strip name) id' "a" (pure Todo)
+  make _                = error "should not happen"
