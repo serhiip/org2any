@@ -7,6 +7,7 @@ module Types
   , Reminders
   , TodoStatus(..)
   , remindersFromList
+  , remindersToList
   , remindersToMapping
   , O2AM(..)
   , runO2AM
@@ -66,6 +67,9 @@ type Reminders = Set Reminder
 
 remindersFromList :: [Reminder] -> Reminders
 remindersFromList = fromList
+
+remindersToList :: Reminders -> [Reminder]
+remindersToList = toList @(Set Reminder)
 
 remindersToMapping :: Reminders -> MS.Map T.Text Reminder
 remindersToMapping rems = MS.fromList $ (,) <$> todoId <*> id <$> toList @(Set Reminder) rems

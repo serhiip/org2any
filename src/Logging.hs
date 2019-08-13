@@ -76,4 +76,3 @@ logInfo = logMessageM Info
 
 logError :: (MonadIO m, ToLogStr a, MonadReader r m, r ~ Bootstrapped) => a -> m ()
 logError = logMessageM Error
-

@@ -25,39 +25,13 @@ remindersSpec = describe "Reminders.App MacOS command generator" $ do
                 \JSON.stringify(res)"
 
   it "should create the reminders by pushing them to existing list of reminders" $ do
-    (createManyScript . remindersFromList $ [Reminder "test" "test1" "test2" Nothing])
-      `shouldBe` "app = Application(\"Reminders\"); \n\
-                   \app.defaultList.reminders.push(app.Reminder(\
-                     \{\"name\":\"test |test1\",\"body\":\"test2\",\"completed\":false}\
-                   \));"
+    createManyScript (convert <$> [Reminder "test" "test1" "test2" Nothing])
+      `shouldBe` "app = Application(\"Reminders\"); \napp.defaultList.reminders.push(app.Reminder({\"dueDate\":null,\"modificationDate\":null,\"creationDate\":null,\"completionDate\":null,\"remindMeDate\":null,\"body\":\"test2\",\"completed\":false,\"id\":\"test1\",\"name\":\"test\",\"priority\":0}));"
 
   it "should delete an reminders by ID" $ do
-    (deleteManyScript . remindersFromList $ [Reminder "test" "test1" "test2" Nothing])
-      `shouldBe` "app = Application('Reminders'); \n\
-                   \items = app.defaultList.reminders(); \n\
-                   \const deletions = \
-                     \{\"test1\":{\"name\":\"test |test1\",\"body\":\"test2\",\"completed\":false}}; \n\
-                     \for (var item of items) { \n\
-                       \const [name, id] = item.name().split('|', 2); \n\
-                       \if (id in deletions) { \n\
-                         \app.delete(item); \n\
-                       \} \n\
-                     \}"
+    deleteManyScript (convert <$> [Reminder "test" "test1" "test2" Nothing])
+      `shouldBe` "app = Application('Reminders'); \nitems = app.defaultList.reminders(); \nconst deletions = {\"test1\":{\"dueDate\":null,\"modificationDate\":null,\"creationDate\":null,\"completionDate\":null,\"remindMeDate\":null,\"body\":\"test2\",\"completed\":false,\"id\":\"test1\",\"name\":\"test\",\"priority\":0}}; \nfor (var item of items) { \nconst [name, id] = item.name().split('|', 2); \nif (id in deletions) { \napp.delete(item); \n} \n}"
 
   it "should update reminder attribute by attribute if ID matches" $ do
-    (updateManyScript . remindersFromList $ [Reminder "test" "test1" "test2" Nothing])
-      `shouldBe` "app = Application('Reminders'); \n\
-                   \items = app.defaultList.reminders(); \n\
-                   \updates = \
-                     \{\"test1\":{\"name\":\"test |test1\",\"body\":\"test2\",\"completed\":false}}; \n\
-                   \for (const item of items) { \nconst [name, id] = item.name().split('|', 2); \n\
-                     \if (id in updates) { \n\
-                       \const to = updates[id]; \n\
-                       \for (const attr_name in to) { \n\
-                         \const upd = to[attr_name]; \n\
-                         \if (item[attr_name]() != upd) { \n\
-                           \item[attr_name] = upd \n\
-                         \} \n\
-                       \} \n\
-                     \} \n\
-                   \}"
+    updateManyScript (convert <$> [Reminder "test" "test1" "test2" Nothing])
+      `shouldBe` "app = Application('Reminders'); \nitems = app.defaultList.reminders(); \nupdates = {\"test1\":{\"dueDate\":null,\"modificationDate\":null,\"creationDate\":null,\"completionDate\":null,\"remindMeDate\":null,\"body\":\"test2\",\"completed\":false,\"id\":\"test1\",\"name\":\"test\",\"priority\":0}}; \nfor (const item of items) { \nconst [name, id] = item.name().split('|', 2); \nif (id in updates) { \nconst to = updates[id]; \nfor (const attr_name in to) { \nconst upd = to[attr_name]; \nif (item[attr_name]() != upd) { \nitem[attr_name] = upd \n} \n} \n} \n}"

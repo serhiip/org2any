@@ -1,5 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module AppleScript.Internal
@@ -8,6 +9,7 @@ module AppleScript.Internal
   , deleteManyScript
   , updateManyScript
   , decodeRemindersList
+  , convert
   )
 where
 
@@ -16,41 +18,35 @@ import           Types                          ( Reminders
                                                 , Reminder(..)
                                                 , TodoStatus(..)
                                                 , remindersFromList
-                                                , remindersToMapping
                                                 )
 import           Data.Aeson                     ( ToJSON(..)
                                                 , FromJSON(..)
-                                                , object
-                                                , pairs
-                                                , (.=)
                                                 , (.:)
                                                 , (.:?)
                                                 , encode
                                                 , withObject
                                                 , eitherDecode
+                                                , genericToEncoding
+                                                , defaultOptions
+                                                , fieldLabelModifier
                                                 )
 
 import           Data.Text                      ( splitOn
                                                 , strip
-                                                , unpack
                                                 )
-
+import           Data.Char                      ( toLower )
+import qualified Data.Map.Strict               as MS
 import qualified AppleScript.Types             as A
 
-instance ToJSON Reminder where
-  toJSON (Reminder n id' b s) = object ["name" .= name, "body" .= b, "completed" .= status]
-    where name = n <> " |" <> id'
-          status = Just Done == s
-
-  toEncoding (Reminder n id' b s) = pairs ("name" .= name <> "body" .= b <> "completed" .= status)
-    where name = n <> " |" <> id'
-          status = Just Done == s
+convert :: Reminder -> A.Reminder
+convert r =
+  A.Reminder Nothing Nothing Nothing Nothing Nothing (todoBody r) (Just Done == todoStatus r) (todoId r) (todoName r) 0
 
 instance FromJSON A.Reminder where
   parseJSON = withObject "Todo" $ \v -> A.Reminder
     <$> v .:? "dueDate"
     <*> v .:? "modificationDate"
-    <*> v .: "creationDate"
+    <*> v .:? "creationDate"
     <*> v .:? "completionDate"
     <*> v .:? "remindMeDate"
     <*> v .: "body"
@@ -59,18 +55,29 @@ instance FromJSON A.Reminder where
     <*> v .: "name"
     <*> v .: "priority"
 
-asStr :: LByteString -> String
-asStr = unpack . decodeUtf8
+instance ToJSON A.Reminder where
+  toEncoding = genericToEncoding defaultOptions
+    { fieldLabelModifier =
+      let
+        firstToLower (f:rest) = toLower f : rest
+        firstToLower [] = error "should not happen"
+      in firstToLower . drop (length @String "todo")
+    }
 
-asJSObject :: Reminders -> String
-asJSObject = asStr . encode . remindersToMapping
+asJSObject :: [A.Reminder] -> LByteString
+asJSObject = encode . MS.fromList . fmap ((,) <$> A.todoId <*> id)
 
-createManyScript :: Reminders -> String
-createManyScript rems =
-  "app = Application(\"Reminders\"); \n"
-    <> concatMap (\n -> "app.defaultList.reminders.push(app.Reminder(" <> (asStr . encode) n <> "));") rems
+createManyScript :: [A.Reminder] -> LByteString
+createManyScript rems = header <> mconcat (fmap (\n -> mconcat [st, encode n, en]) rems)
+ where
+  st :: LByteString
+  st = "app.defaultList.reminders.push(app.Reminder("
+  en :: LByteString
+  en = "));"
+  header :: LByteString
+  header = "app = Application(\"Reminders\"); \n"
 
-listAllScript :: String
+listAllScript :: LByteString
 listAllScript
   = "var r = Application('Reminders'); \n\
                 \var rems = r.defaultList.reminders(); \n\
@@ -85,7 +92,7 @@ listAllScript
                 \}) \n\
                 \JSON.stringify(res)"
 
-deleteManyScript :: Reminders -> String
+deleteManyScript :: [A.Reminder] -> LByteString
 deleteManyScript reminders =
   "app = Application('Reminders'); \n\
                                \items = app.defaultList.reminders(); \n\
@@ -99,7 +106,7 @@ deleteManyScript reminders =
                                  \} \n\
                                \}"
 
-updateManyScript :: Reminders -> String
+updateManyScript :: [A.Reminder] -> LByteString
 updateManyScript reminders =
   "app = Application('Reminders'); \n\
                    \items = app.defaultList.reminders(); \n\
