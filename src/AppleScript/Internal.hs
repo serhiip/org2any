@@ -40,29 +40,32 @@ import qualified AppleScript.Types             as A
 
 convert :: Reminder -> A.Reminder
 convert r =
-  A.Reminder Nothing Nothing Nothing Nothing Nothing (todoBody r) (Just Done == todoStatus r) (todoId r) (todoName r) 0
+  A.Reminder (todoId r) (todoBody r) (Just Done == todoStatus r) (todoName r) 0 Nothing Nothing Nothing Nothing Nothing
 
 instance FromJSON A.Reminder where
   parseJSON = withObject "Todo" $ \v -> A.Reminder
-    <$> v .:? "dueDate"
+    <$> v .: "id"
+    <*> v .: "body"
+    <*> v .: "completed"
+    <*> v .: "name"
+    <*> v .: "priority"
+    <*> v .:? "dueDate"
     <*> v .:? "modificationDate"
     <*> v .:? "creationDate"
     <*> v .:? "completionDate"
     <*> v .:? "remindMeDate"
-    <*> v .: "body"
-    <*> v .: "completed"
-    <*> v .: "id"
-    <*> v .: "name"
-    <*> v .: "priority"
 
 instance ToJSON A.Reminder where
-  toEncoding = genericToEncoding defaultOptions
-    { fieldLabelModifier =
-      let
-        firstToLower (f:rest) = toLower f : rest
-        firstToLower [] = error "should not happen"
-      in firstToLower . drop (length @String "todo")
-    }
+  toEncoding r = enc r { A.todoName = A.todoName r <> " |" <> A.todoId r}
+    where
+      enc =
+            genericToEncoding defaultOptions
+            { fieldLabelModifier =
+              let
+                firstToLower (f:rest) = toLower f : rest
+                firstToLower [] = []
+              in firstToLower . drop (length @String "todo")
+            }
 
 asJSObject :: [A.Reminder] -> LByteString
 asJSObject = encode . MS.fromList . fmap ((,) <$> A.todoId <*> id)
@@ -119,7 +122,7 @@ updateManyScript reminders =
                        \const to = updates[id]; \n\
                        \for (const attr_name in to) { \n\
                          \const upd = to[attr_name]; \n\
-                         \if (item[attr_name]() != upd) { \n\
+                         \if (upd && attr_name != 'id' && item[attr_name]() != upd) { \n\
                            \item[attr_name] = upd \n\
                          \} \n\
                        \} \n\
