@@ -10,6 +10,7 @@ module Logging
   , logError
   , logInfo'
   , logError'
+  , logDebug'
   )
 where
 
@@ -62,6 +63,9 @@ logInfo' = logMessage' Info
 
 logError' :: ToLogStr a => (TimedFastLogger, TimedFastLogger) -> Verbosity -> a -> IO ()
 logError' = logMessage' Error
+
+logDebug' :: ToLogStr a => (TimedFastLogger, TimedFastLogger) -> Verbosity -> a -> IO ()
+logDebug' = logMessage' Debug
 
 logMessageM :: (MonadIO m, ToLogStr a, MonadReader r m, r ~ Bootstrapped) => Severity -> a -> m ()
 logMessageM severity message = do

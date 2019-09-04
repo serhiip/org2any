@@ -19,7 +19,6 @@ import           Types
 
 import           Universum
 import           Universum.Lifted.File          ( readFile )
-import           Prelude                        ( getChar )
 import           Control.Monad.Except           ( throwError )
 import           Logging
 
@@ -52,7 +51,8 @@ main = do
             whenRight result pure
       stop <- watchDir mgr dir shouldUpdate onChange
       logInfo' loggers (configVerbosity conf) "📝 Listening for changes... Press any key to stop"
-      _ <- getChar
+      line <- getLine
+      logDebug' loggers verbosity line
       stop
 
   whenLeft result $ logError' loggers verbosity
@@ -68,6 +68,6 @@ main = do
       parsed
       (\orgTree ->
         let items = reminders orgTree
-        in  if length items == 0 then throwError (NoItemsError path) else evalAppleScript . sync $ items
+        in  if null items then throwError (NoItemsError path) else evalAppleScript . sync $ items
       )
     logDebug "Done"
