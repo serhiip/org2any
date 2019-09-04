@@ -13,7 +13,7 @@
 (defvar org2any/running-processes)
 (setq org2any/running-processes '())
 
-(defun org2any/start-org2any ()
+(defun org2any/start ()
   "Start org2any in file watch mode."
   (when (and (string= (file-name-nondirectory (buffer-file-name)) "test.org")
 	     (not (assoc (current-buffer) org2any/running-processes)))
@@ -27,7 +27,7 @@
   "Send symbol to end watching Org file."
   (let ((process-opt (cdr (assoc (current-buffer) org2any/running-processes))))
     (when (and process-opt (equal (process-status process-opt) 'run))
-      (kill-process process-opt))
+      (process-send-string process-opt "stop via org2any.el\n"))
     (setq org2any/running-processes (assq-delete-all (current-buffer) org2any/running-processes))
     (when (equal 0 (length org2any/running-processes))
       (remove-hook 'kill-buffer-hook 'org2any/teardown))))
