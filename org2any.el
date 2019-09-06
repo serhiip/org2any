@@ -22,32 +22,42 @@
   :type '(repeat regexp)
   :group 'org2any)
 
+(defcustom org2any/verbosity nil
+  "If org2any should be started in debug mode."
+  :type '(choice (const :tag "Normal" nil)
+                 (const :tag "Verbose" "-v")
+                 (const :tag "Quiet" "-q"))
+  :group 'org2any)
+
 (defvar org2any/running-processes nil
   "Mapping from org buffers to running org2any processes.")
 
 (defun org2any/start ()
   "Start org2any in file watch mode."
   (when (and
-	 (not (assoc (current-buffer) org2any/running-processes))
-	 (-any-p
-	      (lambda (re) (string-match-p re (buffer-file-name)))
-	      org2any/autosync-files-regexes))
-    (let ((org2any-process (start-process
-			    org2any/executable-path
-			    "*org2any log*"
-			    "org2any"
-			    (buffer-file-name)
-			    "-v"
-			    "-w")))
+         (not (assoc (current-buffer) org2any/running-processes))
+         (-any-p
+              (lambda (re) (string-match-p re (buffer-file-name)))
+              org2any/autosync-files-regexes))
+    (let* ((args (-non-nil `("-w" ,org2any/verbosity)))
+           (org2any-process (apply 'start-process
+                                   "org2any-process"
+                                   "*org2any-log*"
+                                   org2any/executable-path
+                                   (buffer-file-name)
+                                   args)))
       (setq org2any/running-processes
-	    (cons `(,(current-buffer) . ,org2any-process) org2any/running-processes))
+            (cons `(,(current-buffer) . ,org2any-process) org2any/running-processes))
       (add-hook 'kill-buffer-hook 'org2any/teardown))
     (message "org2any started for %s" (buffer-name))))
 
 (defun org2any/teardown ()
   "Send symbol to end watching Org file."
   (let ((process-opt (cdr (assoc (current-buffer) org2any/running-processes))))
-    (when (and process-opt (equal (process-status process-opt) 'run))
+    (when (and
+           process-opt
+           (processp process-opt)
+           (equal (process-status process-opt) 'run))
       (process-send-string process-opt "stop via org2any.el\n"))
     (setq org2any/running-processes (assq-delete-all (current-buffer) org2any/running-processes))
     (when (equal 0 (length org2any/running-processes))
