@@ -32,6 +32,9 @@
 (defvar org2any/running-processes nil
   "Mapping from org buffers to running org2any processes.")
 
+(defvar org2any/auto-id-option-text "#+OPTIONS: auto-id:t"
+  "String corresponding to option to generate random id for each org entry.")
+
 (defun org2any/start ()
   "Start org2any in file watch mode."
   (when (and
@@ -39,6 +42,16 @@
          (-any-p
               (lambda (re) (string-match-p re (buffer-file-name)))
               org2any/autosync-files-regexes))
+    (when (not (string-match-p
+                (format "^%s$" (regexp-quote org2any/auto-id-option-text))
+                (buffer-string)))
+      (save-excursion
+        (goto-char (point-min))
+        (insert org2any/auto-id-option-text)
+        (open-line 1))
+      (message (format
+                "Org option to generate item ids added (%s)"
+                org2any/auto-id-option-text)))
     (let* ((args (-non-nil `("-w" ,org2any/verbosity)))
            (org2any-process (apply 'start-process
                                    "org2any-process"
