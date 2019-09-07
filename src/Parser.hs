@@ -39,14 +39,14 @@ titles :: (Applicative m, Monoid (m Reminder)) => O.Headline -> m Reminder
 titles item = pure (Reminder (O.title item) (rid item) (lookupBody item) status)
   <> mconcat (titles <$> O.subHeadlines item)
  where
-  rid        = lookupId . O.unProperties . O.sectionProperties . O.section
-  lookupId   = lookupDefault (T.pack "noid") (T.pack "CUSTOM_ID")
+  rid      = lookupId . O.unProperties . O.sectionProperties . O.section
+  lookupId = lookupDefault (T.pack "noid") (T.pack "CUSTOM_ID")
   lookupBody headline = case (O.sectionContents . O.section) headline of
-    [] -> T.empty
+    []                          -> T.empty
     [O.Paragraph [O.Plain txt]] -> txt
-    _ -> T.pack "Org item body type is not supported"
+    _                           -> T.pack "Org item body type is not supported"
 
-  status     = O.stateKeyword item >>= mkStatus . T.unpack . O.unStateKeyword
+  status = O.stateKeyword item >>= mkStatus . T.unpack . O.unStateKeyword
   mkStatus st = case st of
     "DONE" -> Just Done
     "TODO" -> Just Todo

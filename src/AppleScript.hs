@@ -37,7 +37,7 @@ evalAppleScript (Pure r         ) = return r
 evalAppleScript (Free (GetAll f)) = do
   reminders <- decodeRemindersList <$> execute listAllScript
   case reminders of
-    Left  err  -> throwError . SysCallError $ encodeUtf8 @Text @LByteString (pack err)
+    Left  err  -> throwError . SysCallError . encodeUtf8 @Text @LByteString . pack $ err
     Right rems -> evalAppleScript . f $ rems
 evalAppleScript (Free CreateMany {..}) = do
   _ <- execute . createManyScript $ convert <$> remindersToList rs
