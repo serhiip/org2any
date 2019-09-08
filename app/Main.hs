@@ -2,15 +2,10 @@
 
 module Main where
 
-import           AppleScript                    ( evalAppleScript )
 import           Args                           ( Action(..)
                                                 , Args(..)
                                                 , arguments
                                                 , execParser
-                                                )
-import           Command
-import           Parser                         ( reminders
-                                                , runParser
                                                 )
 import           System.Directory
 import           System.FilePath
@@ -18,56 +13,52 @@ import           System.FSNotify         hiding ( Action )
 import           Types
 
 import           Universum
-import           Universum.Lifted.File          ( readFile )
-import           Control.Monad.Except           ( throwError )
 import           Logging
+import           Control.Concurrent.Chan        ( newChan
+                                                , writeChan
+                                                , readChan
+                                                )
+import           Control.Concurrent             ( forkIO )
+import           Executor                       ( execute )
+import           Control.Monad                  ( forever )
 
 main :: IO ()
 main = do
   args@(Args (Sync path toWatch) conf) <- execParser arguments
   canonPath                            <- canonicalizePath path
-  (stdoutLogger, stderrLogger, loggingCleanUp) <- initLogging
+  (stdo, stde, loggingCleanUp)         <- initLogging
+  inputChan                            <- newChan
+  outputChan                           <- newChan
 
-  let loggers   = (stdoutLogger, stderrLogger)
+  let loggers   = (stdo, stde)
       verbosity = configVerbosity conf
-      bootstrap = Bootstrapped conf loggers
+      bootstrap = Bootstrapped conf loggers inputChan outputChan
+      send      = writeChan inputChan
+      debug     = logDebug' loggers verbosity
+      info      = logInfo' loggers verbosity
+      errorr    = logError' loggers verbosity
 
-  result <- runO2AM bootstrap $ do
+  debug $ "Arguments " <> show args
 
-    logDebug $ "Arguments " <> show args
+  _ <- send (SyncEvent path)
 
-    syncFile canonPath
+  _ <- forkIO . forever $ do
+    result <- runO2AM bootstrap execute
+    whenLeft result errorr
 
-    threadPerEvent <- reader (configThreadPerEvent . bootstrappedConfig)
+  unless toWatch $ send EndEvent
 
-    let managerConf = defaultConfig { confThreadPerEvent = threadPerEvent }
+  when toWatch $ withManagerConf defaultConfig $ \manager -> do
+    watchManagerCleanUp <- watchDir manager
+                                    (takeDirectory path)
+                                    (equalFilePath canonPath . eventPath)
+                                    (const $ send (SyncEvent path))
+    info "📝 Listening for changes... Press any key to stop"
+    line <- getLine
+    debug "Stopping file watcher"
+    watchManagerCleanUp
+    send $ UserTerminatedEvent line
 
-    when toWatch $ liftIO . withManagerConf managerConf $ \mgr -> do
-      let dir          = takeDirectory path
-          shouldUpdate = equalFilePath canonPath . eventPath
-          onChange _ = do
-            result <- runO2AM bootstrap (syncFile canonPath)
-            whenLeft result $ logError' loggers verbosity
-            whenRight result pure
-      stop <- watchDir mgr dir shouldUpdate onChange
-      logInfo' loggers (configVerbosity conf) "📝 Listening for changes... Press any key to stop"
-      line <- getLine
-      logDebug' loggers verbosity line
-      stop
-
-  whenLeft result $ logError' loggers verbosity
+  readChan outputChan
+  debug "Cleaning up logging handlers"
   loggingCleanUp
- where
-  syncFile :: FilePath -> O2AM ()
-  syncFile path = do
-    logInfo $ "Processing " <> path
-    parsed <- runParser <$> readFile path
-
-    whenLeft parsed logError
-    whenRight
-      parsed
-      (\orgTree ->
-        let items = reminders orgTree
-        in  if null items then throwError (NoItemsError path) else evalAppleScript . sync $ items
-      )
-    logDebug "Done"

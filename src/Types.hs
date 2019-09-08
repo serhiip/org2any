@@ -6,6 +6,7 @@ module Types
   ( Reminder(..)
   , Reminders
   , TodoStatus(..)
+  , Event(..)
   , remindersFromList
   , remindersToList
   , remindersToMapping
@@ -28,8 +29,17 @@ import           Data.Set                       ( fromList
 import qualified Data.Map.Strict               as MS
 import           Control.Monad.Except           ( MonadError(..) )
 import           System.Log.FastLogger          ( TimedFastLogger )
+import           Control.Concurrent.Chan        ( Chan )
+import           System.FilePath                ( FilePath )
 
 data Verbosity = Normal | Verbose | Quiet deriving (Show, Eq)
+
+data Event =
+  UserTerminatedEvent T.Text
+  | SystemTerminatedEvent
+  | SyncEvent FilePath
+  | EndEvent
+  deriving (Show, Eq)
 
 data SyncConfig = SyncConfig
       { configVerbosity :: Verbosity
@@ -39,6 +49,8 @@ data SyncConfig = SyncConfig
 data Bootstrapped = Bootstrapped
   { bootstrappedConfig :: SyncConfig
   , bootstrappedLoggers :: (TimedFastLogger, TimedFastLogger)
+  , bootstrappedInput :: Chan Event
+  , bootstrappedOutput :: Chan ()
   }
 
 data SyncError = SysCallError LByteString | NoItemsError FilePath deriving (Show)
