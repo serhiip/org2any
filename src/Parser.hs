@@ -1,4 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Parser
   ( titles
@@ -20,6 +21,7 @@ import qualified Data.Text                     as T
 import           Types                          ( Reminder(..)
                                                 , Reminders
                                                 , TodoStatus(..)
+                                                , SyncError(..)
                                                 )
 import           Data.Monoid                    ( mconcat )
 
@@ -27,11 +29,11 @@ newtype Org = Org
   { doc :: O.Document
   } deriving (Show)
 
-runParser :: T.Text -> Either String Org
+runParser :: T.Text -> Either SyncError Org
 runParser = bimap verboseError Org . A.parseOnly parser
  where
   parser       = O.parseDocument
-  verboseError = flip (++) "Error parsing Org File: "
+  verboseError = SysCallError . fromString
 
 newtype Title = Title {text :: T.Text} deriving Show
 

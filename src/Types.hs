@@ -95,6 +95,8 @@ newtype O2AM a = O2AM
   , MonadIO
   , MonadReader Bootstrapped
   , MonadError SyncError
+  , MonadThrow
+  , MonadCatch
   )
 
 runO2AM :: Bootstrapped -> O2AM a -> IO (Either SyncError a)

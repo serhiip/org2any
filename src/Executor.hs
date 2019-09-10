@@ -16,6 +16,7 @@ import           Parser                         ( reminders
                                                 )
 import           Control.Monad.Except           ( throwError )
 import           AppleScript                    ( evalAppleScript )
+import           Universum.Exception            ( try )
 
 
 import           Logging
@@ -32,9 +33,10 @@ execute = do
     SystemTerminatedEvent         -> logError "org2any was terminated" *> notifyEnd
     SyncEvent filePath            -> do
       logInfo $ "Processing " <> filePath
-
-      parsed <- runParser <$> readFile filePath
-
+      fileContents <- (try . readFile) filePath :: O2AM (Either SomeException Text)
+      parsed       <- case fileContents of
+        Left  err      -> throwError . SysCallError . fromString . show $ err
+        Right contents -> return $ runParser contents
       whenLeft parsed logError
       whenRight
         parsed
