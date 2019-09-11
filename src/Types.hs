@@ -19,18 +19,17 @@ module Types
   )
 where
 
-import           Universum
-
+import           Control.Concurrent.Chan        ( Chan )
+import           Control.Monad.Except           ( MonadError(..) )
 import           Data.Function                  ( on )
-import qualified Data.Text                     as T
+import qualified Data.Map.Strict               as MS
 import           Data.Set                       ( fromList
                                                 , Set
                                                 )
-import qualified Data.Map.Strict               as MS
-import           Control.Monad.Except           ( MonadError(..) )
-import           System.Log.FastLogger          ( TimedFastLogger )
-import           Control.Concurrent.Chan        ( Chan )
+import qualified Data.Text                     as T
 import           System.FilePath                ( FilePath )
+import           System.Log.FastLogger          ( TimedFastLogger )
+import           Universum
 
 data Verbosity = Normal | Verbose | Quiet deriving (Show, Eq)
 
@@ -84,7 +83,8 @@ remindersToList :: Reminders -> [Reminder]
 remindersToList = toList @(Set Reminder)
 
 remindersToMapping :: Reminders -> MS.Map T.Text Reminder
-remindersToMapping rems = MS.fromList $ (,) <$> todoId <*> id <$> toList @(Set Reminder) rems
+remindersToMapping rems =
+  MS.fromList $ (,) <$> todoId <*> id <$> toList @(Set Reminder) rems
 
 newtype O2AM a = O2AM
   { getO2AM :: ExceptT SyncError (ReaderT Bootstrapped IO) a

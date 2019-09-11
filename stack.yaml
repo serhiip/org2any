@@ -4,4 +4,4 @@ packages:
 - .
 extra-deps:
 - orgmode-parse
-- hfsnotify
+

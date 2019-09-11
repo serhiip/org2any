@@ -21,7 +21,6 @@ import           Parser                         ( reminders
 import           Types
 import           Universum
 
-
 execute :: O2AM ()
 execute = do
   input  <- reader bootstrappedInput
