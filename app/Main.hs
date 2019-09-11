@@ -7,20 +7,19 @@ import           Args                           ( Action(..)
                                                 , arguments
                                                 , execParser
                                                 )
-import           System.Directory
-import           System.FilePath
-import           System.FSNotify         hiding ( Action )
-import           Types
-
-import           Universum
-import           Logging
+import           Control.Concurrent             ( forkIO )
 import           Control.Concurrent.Chan        ( newChan
                                                 , writeChan
                                                 , readChan
                                                 )
-import           Control.Concurrent             ( forkIO )
-import           Executor                       ( execute )
 import           Control.Monad                  ( forever )
+import           Executor                       ( execute )
+import           Logging
+import           System.Directory
+import           System.FSNotify         hiding ( Action )
+import           System.FilePath
+import           Types
+import           Universum
 
 main :: IO ()
 main = do
@@ -36,15 +35,15 @@ main = do
       send      = writeChan inputChan
       debug     = logDebug' loggers verbosity
       info      = logInfo' loggers verbosity
-      errorr    = logError' loggers verbosity
+      error'    = logError' loggers verbosity
 
   debug $ "Arguments " <> show args
 
-  _ <- send (SyncEvent path)
+  send (SyncEvent path)
 
   _ <- forkIO . forever $ do
     result <- runO2AM bootstrap execute
-    whenLeft result errorr
+    whenLeft result error'
 
   unless toWatch $ send EndEvent
 
