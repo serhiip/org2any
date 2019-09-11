@@ -5,23 +5,22 @@ module Executor
   )
 where
 
-import           Types
-import           Universum
+import           AppleScript                    ( evalAppleScript )
+import           Command
 import           Control.Concurrent.Chan        ( readChan
                                                 , writeChan
                                                 )
-import           Command
+import           Control.Exception              ( IOException )
+import           Control.Monad.Except           ( throwError
+                                                , liftEither
+                                                )
+import           Logging
 import           Parser                         ( reminders
                                                 , runParser
                                                 )
-import           Control.Monad.Except           ( throwError, liftEither )
-import           AppleScript                    ( evalAppleScript )
-import           Universum.Exception            ( try )
-import           Data.Bifunctor                 ( bimap )
+import           Types
+import           Universum
 
-
-
-import           Logging
 
 execute :: O2AM ()
 execute = do
@@ -35,13 +34,14 @@ execute = do
     SystemTerminatedEvent         -> logError "org2any was terminated" *> notifyEnd
     SyncEvent filePath            -> do
       logInfo $ "Processing " <> filePath
-      fileContents <- (try . readFile) filePath :: O2AM (Either SomeException Text)
-      contents <- liftEither $ bimap (SysCallError . show) id fileContents
-      orgTree <- liftEither $ runParser contents
+      fileContents <- (try . readFile) filePath :: O2AM (Either IOException Text)
+      contents     <- liftEither $ first (SysCallError . show) fileContents
+      orgTree      <- liftEither $ runParser contents
 
       let items = reminders orgTree
-        in  if null items
-            then throwError (NoItemsError filePath)
-            else evalAppleScript . sync $ items
+
+      if null items
+        then throwError (NoItemsError filePath)
+        else (evalAppleScript . sync) items
 
       logDebug "Done"
