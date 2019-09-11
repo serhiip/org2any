@@ -14,9 +14,11 @@ import           Command
 import           Parser                         ( reminders
                                                 , runParser
                                                 )
-import           Control.Monad.Except           ( throwError )
+import           Control.Monad.Except           ( throwError, liftEither )
 import           AppleScript                    ( evalAppleScript )
 import           Universum.Exception            ( try )
+import           Data.Bifunctor                 ( bimap )
+
 
 
 import           Logging
@@ -34,17 +36,12 @@ execute = do
     SyncEvent filePath            -> do
       logInfo $ "Processing " <> filePath
       fileContents <- (try . readFile) filePath :: O2AM (Either SomeException Text)
-      parsed       <- case fileContents of
-        Left  err      -> throwError . SysCallError . fromString . show $ err
-        Right contents -> return $ runParser contents
-      whenLeft parsed logError
-      whenRight
-        parsed
-        (\orgTree ->
-          let items = reminders orgTree
-          in  if null items
-              then throwError (NoItemsError filePath)
-              else evalAppleScript . sync $ items
-        )
+      contents <- liftEither $ bimap (SysCallError . show) id fileContents
+      orgTree <- liftEither $ runParser contents
+
+      let items = reminders orgTree
+        in  if null items
+            then throwError (NoItemsError filePath)
+            else evalAppleScript . sync $ items
 
       logDebug "Done"
