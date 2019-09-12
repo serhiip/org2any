@@ -11,6 +11,8 @@
 (setq lexical-binding t)
 
 (require 'dash)
+(require 'org)
+(require 'org-id)
 
 (defcustom org2any/executable-path "org2any"
   "Path to org2any executable."
@@ -32,26 +34,11 @@
 (defvar org2any/running-processes nil
   "Mapping from org buffers to running org2any processes.")
 
-(defvar org2any/auto-id-option-text "#+OPTIONS: auto-id:t"
-  "String corresponding to option to generate random id for each org entry.")
-
 (defun org2any/start ()
   "Start org2any in file watch mode."
   (when (and
          (not (assoc (current-buffer) org2any/running-processes))
-         (-any-p
-              (lambda (re) (string-match-p re (buffer-file-name)))
-              org2any/autosync-files-regexes))
-    (when (not (string-match-p
-                (format "^%s$" (regexp-quote org2any/auto-id-option-text))
-                (buffer-string)))
-      (save-excursion
-        (goto-char (point-min))
-        (insert org2any/auto-id-option-text)
-        (open-line 1))
-      (message (format
-                "Org option to generate item ids added (%s)"
-                org2any/auto-id-option-text)))
+         (org2any/file-tracked-p))
     (let* ((args (-non-nil `("-w" ,org2any/verbosity)))
            (org2any-process (apply 'start-process
                                    "org2any-process"
@@ -61,7 +48,8 @@
                                    args)))
       (setq org2any/running-processes
             (cons `(,(current-buffer) . ,org2any-process) org2any/running-processes))
-      (add-hook 'kill-buffer-hook 'org2any/teardown))
+      (add-hook 'kill-buffer-hook 'org2any/teardown)
+      (add-hook 'before-save-hook 'org2any/maybe-add-org-ids))
     (message "org2any started for %s" (buffer-name))))
 
 (defun org2any/teardown ()
@@ -72,9 +60,36 @@
            (processp process-opt)
            (equal (process-status process-opt) 'run))
       (process-send-string process-opt "stop via org2any.el\n"))
-    (setq org2any/running-processes (assq-delete-all (current-buffer) org2any/running-processes))
+    (setq org2any/running-processes
+          (assq-delete-all (current-buffer) org2any/running-processes))
     (when (equal 0 (length org2any/running-processes))
-      (remove-hook 'kill-buffer-hook 'org2any/teardown))))
+      (remove-hook 'kill-buffer-hook 'org2any/teardown)
+      (remove-hook 'before-save-hook 'org2any/maybe-add-org-ids))))
+
+(defun org2any/file-tracked-p ()
+  "Check if current file is set up for atutomatic synchronization."
+  (-any-p
+   (lambda (re) (string-match-p re (buffer-file-name)))
+   org2any/autosync-files-regexes))
+
+(defun org2any/maybe-add-org-ids ()
+  "Add identifiers to org items if buffer is matched."
+  (when (and (eq major-mode 'org-mode)
+             (eq buffer-read-only nil)
+             (org2any/file-tracked-p))
+    (org2any/add-ids-to-items-in-current-file)))
+
+(defun org2any/add-ids-to-items-in-current-file ()
+  "Populate ids for org items in current buffer."
+  (org-map-entries
+   (lambda ()
+     (org-with-point-at (point)
+       (let* ((id-field-name "ID")
+              (id (org-entry-get nil id-field-name)))
+         (unless (and id (stringp id) (string-match "\\S-" id))
+           (setq id (org-id-new))
+           (org-entry-put (point) id-field-name id)
+           (org-id-add-location id (buffer-file-name (buffer-base-buffer)))))))))
 
 (provide 'org2any)
 
