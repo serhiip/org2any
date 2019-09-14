@@ -2,6 +2,7 @@
 
 module AppleScript.Types
   ( Reminder(..)
+  , ReminderList(..)
   )
 where
 
@@ -9,6 +10,11 @@ import           GHC.Generics
 
 import           Data.Time.LocalTime            ( ZonedTime )
 import           Universum
+
+data ReminderList = ReminderList {
+    listId :: Text
+  , listName :: Text
+  } deriving (Show, Eq, Ord, Generic)
 
 data Reminder = Reminder {
     todoId :: Text

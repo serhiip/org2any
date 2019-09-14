@@ -9,16 +9,13 @@ module AppleScript.Internal
   , deleteManyScript
   , updateManyScript
   , decodeRemindersList
+  , listListsScript
   , convert
+  , convertBucket
   )
 where
 
-import           Universum
-import           Types                          ( Reminders
-                                                , Reminder(..)
-                                                , TodoStatus(..)
-                                                , remindersFromList
-                                                )
+import qualified AppleScript.Types             as A
 import           Data.Aeson                     ( ToJSON(..)
                                                 , FromJSON(..)
                                                 , (.:)
@@ -30,17 +27,35 @@ import           Data.Aeson                     ( ToJSON(..)
                                                 , defaultOptions
                                                 , fieldLabelModifier
                                                 )
-
+import           Data.Bifunctor                 ( first )
+import           Data.Char                      ( toLower )
+import qualified Data.Map.Strict               as MS
 import           Data.Text                      ( splitOn
                                                 , strip
                                                 )
-import           Data.Char                      ( toLower )
-import qualified Data.Map.Strict               as MS
-import qualified AppleScript.Types             as A
+import           Types                          ( Reminders
+                                                , Reminder(..)
+                                                , TodoStatus(..)
+                                                , remindersFromList
+                                                , BucketId
+                                                , Bucket(..)
+                                                )
+import           Universum
 
 convert :: Reminder -> A.Reminder
-convert r =
-  A.Reminder (todoId r) (todoBody r) (Just Done == todoStatus r) (todoName r) 0 Nothing Nothing Nothing Nothing Nothing
+convert r = A.Reminder (todoId r)
+                       (todoBody r)
+                       (Just Done == todoStatus r)
+                       (todoName r)
+                       0
+                       Nothing
+                       Nothing
+                       Nothing
+                       Nothing
+                       Nothing
+
+convertBucket :: A.ReminderList -> Bucket
+convertBucket (A.ReminderList bid name) = Bucket bid name
 
 instance FromJSON A.Reminder where
   parseJSON = withObject "Todo" $ \v -> A.Reminder
@@ -54,6 +69,11 @@ instance FromJSON A.Reminder where
     <*> v .:? "creationDate"
     <*> v .:? "completionDate"
     <*> v .:? "remindMeDate"
+
+instance FromJSON A.ReminderList where
+  parseJSON = withObject "TodoList" $ \l -> A.ReminderList
+    <$> l .: "id"
+    <*> l .: "name"
 
 instance ToJSON A.Reminder where
   toEncoding r = enc r { A.todoName = A.todoName r <> " |" <> A.todoId r}
@@ -70,8 +90,9 @@ instance ToJSON A.Reminder where
 asJSObject :: [A.Reminder] -> LByteString
 asJSObject = encode . MS.fromList . fmap ((,) <$> A.todoId <*> id)
 
-createManyScript :: [A.Reminder] -> LByteString
-createManyScript rems = header <> mconcat (fmap (\n -> mconcat [st, encode n, en]) rems)
+createManyScript :: BucketId -> [A.Reminder] -> LByteString
+createManyScript _ rems = header
+  <> mconcat (fmap (\n -> mconcat [st, encode n, en]) rems)
  where
   st :: LByteString
   st = "app.defaultList.reminders.push(app.Reminder("
@@ -80,58 +101,82 @@ createManyScript rems = header <> mconcat (fmap (\n -> mconcat [st, encode n, en
   header :: LByteString
   header = "app = Application(\"Reminders\"); \n"
 
-listAllScript :: LByteString
-listAllScript
-  = "var r = Application('Reminders'); \n\
-                \var rems = r.defaultList.reminders(); \n\
-                \const res = rems.map(reminder => { \n\
-	            \const props = reminder.properties(); \n\
-	            \props['container'] = null; \n\
-	            \for (var property in props) \n\
-                        \if (props.hasOwnProperty(property)) \n\
-		            \if (props[property] && props[property].toISOString) \n\
-			        \props[property] = props[property].toISOString() \n\
-	            \return props \n\
-                \}) \n\
-                \JSON.stringify(res)"
-
-deleteManyScript :: [A.Reminder] -> LByteString
-deleteManyScript reminders =
+listAllScript :: BucketId -> LByteString
+listAllScript bid =
   "app = Application('Reminders'); \n\
-                               \items = app.defaultList.reminders(); \n\
-                               \const deletions = "
+  \list = app.lists().filter(_ => _.id() == '"
+    <> encodeUtf8 @Text @LByteString bid
+    <> "')[0]; \n\
+  \var rems = list.reminders(); \n\
+  \const res = rems.map(reminder => { \n\
+    \const props = reminder.properties(); \n\
+    \props['container'] = null; \n\
+    \for (var property in props) \n\
+      \if (props.hasOwnProperty(property)) \n\
+        \if (props[property] && props[property].toISOString) \n\
+          \props[property] = props[property].toISOString() \n\
+      \return props \n\
+    \}) \n\
+  \JSON.stringify(res)"
+
+deleteManyScript :: BucketId -> [A.Reminder] -> LByteString
+deleteManyScript bid reminders =
+  "app = Application('Reminders'); \n\
+  \list = app.lists().filter(_ => _.id() == '"
+    <> encodeUtf8 @Text @LByteString bid
+    <> "')[0];\n\
+  \items = list.reminders(); \n\
+  \const deletions = "
     <> asJSObject reminders
     <> "; \n\
-                               \for (var item of items) { \n\
-                                 \const [name, id] = item.name().split('|', 2); \n\
-                                 \if (id in deletions) { \n\
-                                    \app.delete(item); \n\
-                                 \} \n\
-                               \}"
+  \for (var item of items) { \n\
+    \const [name, id] = item.name().split('|', 2); \n\
+    \if (id in deletions) { \n\
+      \app.delete(item); \n\
+    \} \n\
+  \}"
 
-updateManyScript :: [A.Reminder] -> LByteString
-updateManyScript reminders =
+updateManyScript :: BucketId -> [A.Reminder] -> LByteString
+updateManyScript bid reminders =
   "app = Application('Reminders'); \n\
-                   \items = app.defaultList.reminders(); \n\
-                   \updates = "
+  \list = app.lists().filter(_ => _.id() == '"
+    <> encodeUtf8 @Text @LByteString bid
+    <> "')[0];\n\
+  \items = list.reminders(); \n\
+  \updates = "
     <> asJSObject reminders
     <> "; \n\
-                   \for (const item of items) { \n\
-                     \const [name, id] = item.name().split('|', 2); \n\
-                     \if (id in updates) { \n\
-                       \const to = updates[id]; \n\
-                       \for (const attr_name in to) { \n\
-                         \const upd = to[attr_name]; \n\
-                         \if (upd && attr_name != 'id' && item[attr_name]() != upd) { \n\
-                           \item[attr_name] = upd \n\
-                         \} \n\
-                       \} \n\
-                     \} \n\
-                   \}"
+  \for (const item of items) { \n\
+    \const [name, id] = item.name().split('|', 2); \n\
+    \if (id in updates) { \n\
+      \const to = updates[id]; \n\
+      \for (const attr_name in to) { \n\
+        \const upd = to[attr_name]; \n\
+        \if (upd && attr_name != 'id' && item[attr_name]() != upd) { \n\
+          \item[attr_name] = upd \n\
+        \} \n\
+      \} \n\
+    \} \n\
+  \}"
 
-decodeRemindersList :: LByteString -> Either String Reminders
+listListsScript :: LByteString
+listListsScript
+  = "app = Application('Reminders'); \n\
+  \const res = app.lists().map(reminder => { \n\
+    \const props = reminder.properties(); \n\
+    \props['container'] = null; \n\
+    \for (var property in props) \n\
+      \if (props.hasOwnProperty(property)) \n\
+        \if (props[property] && props[property].toISOString) \n\
+          \props[property] = props[property].toISOString(); \n\
+    \return props; \n\
+  \}); \n\
+  \JSON.stringify(res);"
+
+
+decodeRemindersList :: LByteString -> Either Text Reminders
 decodeRemindersList t = do
-  decoded <- eitherDecode t
+  decoded <- first fromString (eitherDecode t)
   let names = A.todoName <$> decoded
       rems  = make . splitOn "|" <$> names
 

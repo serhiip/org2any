@@ -31,7 +31,7 @@ execute = do
     EndEvent                      -> notifyEnd
     UserTerminatedEvent lastWords -> logDebug lastWords *> notifyEnd
     SystemTerminatedEvent         -> logError "org2any was terminated" *> notifyEnd
-    SyncEvent filePath            -> do
+    SyncEvent filePath dst        -> do
       logInfo $ "Processing " <> filePath
       fileContents <- (try . readFile) filePath :: O2AM (Either IOException Text)
       contents     <- liftEither $ first (SysCallError . show) fileContents
@@ -39,8 +39,10 @@ execute = do
 
       let items = reminders orgTree
 
-      if null items
-        then throwError (NoItemsError filePath)
-        else (evalAppleScript . sync) items
+      evald <- if null items
+               then throwError (NoItemsError filePath)
+               else evalAppleScript . sync dst $ items
+
+      liftEither evald
 
       logDebug "Done"

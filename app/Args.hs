@@ -15,30 +15,40 @@ import           Types
 
 data Action
   = Sync { filePath :: FilePath
+         , syncDestination :: Maybe Text
          , watch    :: Bool }
   deriving (Show)
 
-watchOpt :: Parser Bool
-watchOpt = switch (long "watch" <> short 'w' <> help "Watch file changes and execute a sync on each change")
-
 verboseOpt :: Parser Verbosity
-verboseOpt = flag Normal Verbose (short 'v' <> help "Log additional information to stdout")
+verboseOpt =
+  flag Normal Verbose (short 'v' <> help "Log additional information to stdout")
 
 quietOpt :: Parser Verbosity
-quietOpt = flag' Quiet (long "quiet" <> short 'q' <> help "Dont log any information to stdout")
-
-crazyOpt :: Parser Bool
-crazyOpt = switch
-  (long "crazy" <> short 'c' <> help "Create parallel threads to handle individual file updates (causes errors now)")
-
-fileArg :: Parser FilePath
-fileArg = argument str (metavar "FILEPATH")
+quietOpt =
+  flag' Quiet (long "quiet" <> short 'q' <> help "Dont log any information to stdout")
 
 syncParser :: Parser Action
-syncParser = Sync <$> fileArg <*> watchOpt
+syncParser =
+  Sync
+    <$> argument str (metavar "FILEPATH")
+    <*> (   Just
+        <$> strOption
+              (long "destination" <> metavar "DESTINATION" <> help
+                "Where to save reminders parsed in FILEPATH"
+              )
+        <|> flag'
+              Nothing
+              (  long "default-destination"
+              <> help "Use default destination to store todos"
+              )
+        )
+    <*> switch
+          (long "watch" <> short 'w' <> help
+            "Watch file changes and execute a sync on each change"
+          )
 
 configParser :: Parser SyncConfig
-configParser = SyncConfig <$> (verboseOpt <|> quietOpt) <*> crazyOpt
+configParser = SyncConfig <$> (verboseOpt <|> quietOpt)
 
 data Args = Args
   { action :: Action
@@ -46,5 +56,6 @@ data Args = Args
   } deriving (Show)
 
 arguments :: ParserInfo Args
-arguments = info (Args <$> syncParser <*> configParser <**> helper)
-                 (fullDesc <> progDesc "Sync org file with MacOS Reminders" <> header "Reminders helper")
+arguments = info
+  (Args <$> syncParser <*> configParser <**> helper)
+  (fullDesc <> progDesc "Sync org file with MacOS Reminders" <> header "Reminders helper")

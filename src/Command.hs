@@ -1,73 +1,91 @@
 {-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Command
   ( Reminders
   , CommandF(..)
   , Command
   , runDry
+  , sync
+  , listBuckets
   , create
-  , createMany
-  , list
   , del
   , updateMany
-  , sync
   )
 where
 
-import           Universum
 import           Control.Monad.Free
 import qualified Data.Set                      as S
 import           Types
+import           Universum
 
 data CommandF x =
-  GetAll {cont :: Reminders -> x}
-  | CreateMany {rs :: Reminders, x :: x}
-  | DeleteMany {rs :: Reminders, x :: x}
-  | UpdateAll {rs :: Reminders, x :: x}
+    GetAll Bucket (Reminders -> x)
+  | CreateMany Bucket Reminders x
+  | DeleteMany Bucket Reminders x
+  | UpdateAll Bucket Reminders x
+  | ListBuckets (Buckets -> x)
 
 instance Functor CommandF where
-  fmap f (GetAll f')          = GetAll (f . f')
-  fmap f CreateMany {..} = CreateMany rs (f x)
-  fmap f DeleteMany {..} = DeleteMany rs (f x)
-  fmap f UpdateAll {..}  = UpdateAll rs (f x)
+  fmap f (GetAll bid f') = GetAll bid (f . f')
+  fmap f (CreateMany bid rs x) = CreateMany bid rs (f x)
+  fmap f (DeleteMany bid rs x) = DeleteMany bid rs (f x)
+  fmap f (UpdateAll bid rs x) = UpdateAll bid rs (f x)
+  fmap f (ListBuckets f') = ListBuckets (f . f')
 
 type Command = Free CommandF
 
-list :: Command Reminders
-list = liftF $ GetAll id
+list :: Bucket -> Command Reminders
+list bid = liftF $ GetAll bid id
 
-create :: Reminder -> Command ()
-create = createMany . S.singleton
+create :: Bucket -> Reminder -> Command ()
+create bid = createMany bid . S.singleton
 
-createMany :: Reminders -> Command ()
-createMany rs = do
-  existing <- list
-  liftF $ CreateMany (S.filter (not . flip elem existing) rs) ()
+createMany :: Bucket -> Reminders -> Command ()
+createMany bid rs = liftF $ CreateMany bid rs ()
 
-del :: Reminder -> Command ()
-del = delMany . S.singleton
+del :: Bucket -> Reminder -> Command ()
+del bid = delMany bid . S.singleton
 
-delMany :: Reminders -> Command ()
-delMany = liftF . flip DeleteMany ()
+delMany :: Bucket -> Reminders -> Command ()
+delMany bid rs = liftF $ DeleteMany bid rs ()
 
-updateMany :: Reminders -> Command ()
-updateMany = liftF . flip UpdateAll ()
+updateMany :: Bucket -> Reminders -> Command ()
+updateMany bid rs = liftF $ UpdateAll bid rs ()
 
-sync :: Reminders -> Command ()
-sync toSync = do
-  existing <- list
-  let (updates, creations) = S.partition (`elem` existing) toSync
-      deletions            = S.filter (`notElem` toSync) existing
+listBuckets :: Command Buckets
+listBuckets = liftF $ ListBuckets id
 
-  delMany deletions
-  updateMany updates
-  createMany creations
-  pure ()
+sync :: Maybe BucketId -> Reminders -> Command (Either SyncError ())
+sync bId toSync = do
+  buckets <- listBuckets
+  let name = bId ?: "Reminders"
+  case
+      head
+        <$> (nonEmpty . S.elems . S.filter ((== name) . bucketName))
+              buckets
+    of
+      Just bucket -> do
+        existing <- list bucket
+        let (updates, creations) = S.partition (`elem` existing) toSync
+            deletions            = S.filter (`notElem` toSync) existing
+
+        delMany bucket deletions
+        updateMany bucket updates
+        createMany bucket creations
+        return $ Right ()
+      Nothing -> return . Left . InvalidDestinationError $ name
 
 runDry :: Command x -> IO x
-runDry (Pure r                ) = return r
-runDry (Free (GetAll f       )) = putStrLn "would list all" >> mempty >>= runDry . f
-runDry (Free (CreateMany rs x)) = putStrLn ("would create " ++ show rs) >> runDry x
-runDry (Free (DeleteMany rs x)) = putStrLn ("would delete " ++ show rs) >> runDry x
-runDry (Free (UpdateAll  rs x)) = putStrLn ("would delete " ++ show rs) >> runDry x
+runDry (Pure r) = return r
+runDry (Free (GetAll bid f)) =
+  putStrLn @String ("would list all in " <> show bid) >> mempty >>= runDry . f
+runDry (Free (CreateMany bid rs rest)) =
+  putStrLn @String ("would create " <> show rs <> " in " <> show bid) >> runDry rest
+runDry (Free (DeleteMany bid rs rest)) =
+  putStrLn @String ("would delete " <> show rs <> " in " <> show bid) >> runDry rest
+runDry (Free (UpdateAll bid rs rest)) =
+  putStrLn @String ("would delete " <> show rs <> " in " <> show bid) >> runDry rest
+runDry (Free (ListBuckets rest)) =
+  putStrLn @String "would list all todo lists" >> mempty >>= runDry . rest

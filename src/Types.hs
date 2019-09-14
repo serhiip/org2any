@@ -5,6 +5,8 @@
 module Types
   ( Reminder(..)
   , Reminders
+  , BucketId
+  , Buckets
   , TodoStatus(..)
   , Event(..)
   , remindersFromList
@@ -16,6 +18,7 @@ module Types
   , Verbosity(..)
   , SyncError(..)
   , Bootstrapped(..)
+  , Bucket(..)
   )
 where
 
@@ -34,15 +37,14 @@ import           Universum
 data Verbosity = Normal | Verbose | Quiet deriving (Show, Eq)
 
 data Event =
-  UserTerminatedEvent T.Text
+    UserTerminatedEvent T.Text
   | SystemTerminatedEvent
-  | SyncEvent FilePath
+  | SyncEvent FilePath (Maybe Text)
   | EndEvent
   deriving (Show, Eq)
 
 data SyncConfig = SyncConfig
       { configVerbosity :: Verbosity
-      , configThreadPerEvent :: Bool
       } deriving (Show)
 
 data Bootstrapped = Bootstrapped
@@ -52,7 +54,7 @@ data Bootstrapped = Bootstrapped
   , bootstrappedOutput :: Chan ()
   }
 
-data SyncError = SysCallError LByteString | NoItemsError FilePath deriving (Show)
+data SyncError = SysCallError Text | NoItemsError FilePath | InvalidDestinationError Text deriving (Show)
 
 data TodoStatus
   = Todo
@@ -75,6 +77,14 @@ instance Ord Reminder where
   compare = compare `on` todoId
 
 type Reminders = Set Reminder
+
+type BucketId = Text
+
+data Bucket = Bucket { bucketId :: BucketId
+                     , bucketName :: Text
+                     } deriving (Show, Eq, Ord)
+
+type Buckets = Set Bucket
 
 remindersFromList :: [Reminder] -> Reminders
 remindersFromList = fromList

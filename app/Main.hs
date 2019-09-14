@@ -23,11 +23,11 @@ import           Universum
 
 main :: IO ()
 main = do
-  args@(Args (Sync path toWatch) conf) <- execParser arguments
-  canonPath                            <- canonicalizePath path
-  (stdo, stde, loggingCleanUp)         <- initLogging
-  inputChan                            <- newChan
-  outputChan                           <- newChan
+  args@(Args (Sync path dst toWatch) conf) <- execParser arguments
+  canonPath                    <- canonicalizePath path
+  (stdo, stde, loggingCleanUp) <- initLogging
+  inputChan                    <- newChan
+  outputChan                   <- newChan
 
   let loggers   = (stdo, stde)
       verbosity = configVerbosity conf
@@ -39,7 +39,7 @@ main = do
 
   debug $ "Arguments " <> show args
 
-  send (SyncEvent path)
+  send (SyncEvent path dst)
 
   _ <- forkIO . forever $ do
     result <- runO2AM bootstrap execute
@@ -51,7 +51,7 @@ main = do
     watchManagerCleanUp <- watchDir manager
                                     (takeDirectory path)
                                     (equalFilePath canonPath . eventPath)
-                                    (const $ send (SyncEvent path))
+                                    (const $ send (SyncEvent path dst))
     info "📝 Listening for changes... Press any key to stop"
     line <- getLine
     debug "Stopping file watcher"

@@ -14,6 +14,8 @@ module Logging
   )
 where
 
+import           Data.Text                      ( unpack )
+import qualified Data.Text.Lazy                as TL
 import           System.Log.FastLogger          ( ToLogStr
                                                 , toLogStr
                                                 , newTimedFastLogger
@@ -23,9 +25,7 @@ import           System.Log.FastLogger          ( ToLogStr
 import           System.Log.FastLogger.Date     ( newTimeCache
                                                 , simpleTimeFormat'
                                                 )
-import qualified Data.Text.Lazy                as TL
 import           Types
-
 import           Universum
 
 instance ToLogStr Severity where
@@ -35,7 +35,12 @@ instance ToLogStr Severity where
 
 instance ToLogStr SyncError where
   toLogStr (SysCallError bs) = toLogStr bs
-  toLogStr (NoItemsError path) = toLogStr "No org items found to import in " <> show path
+  toLogStr (NoItemsError path) =
+    toLogStr $ "No org items found to import in " <> show path
+  toLogStr (InvalidDestinationError destination) =
+    toLogStr $ "There was an error getting reminders from "
+    <> unpack destination
+    <> ". Try specifying different name"
 
 data Severity = Debug | Info | Error deriving (Show, Eq, Ord)
 
@@ -46,11 +51,24 @@ initLogging = do
   (stderrLogger, cleanUp') <- newTimedFastLogger timeCache (LogStderr 1)
   return (stdoutLogger, stderrLogger, cleanUp >> cleanUp')
 
-logMessage' :: ToLogStr a => Severity -> (TimedFastLogger, TimedFastLogger) -> Verbosity -> a -> IO ()
+logMessage'
+  :: ToLogStr a
+  => Severity
+  -> (TimedFastLogger, TimedFastLogger)
+  -> Verbosity
+  -> a
+  -> IO ()
 logMessage' severity (stdo, stde) verbosity message = do
   let logger = if severity == Error then stde else stdo
   when canLog $ logger
-    (\time -> toLogStr time <> toLogStr " " <> toLogStr severity <> toLogStr " " <> toLogStr message <> toLogStr "\n")
+    (\time ->
+      toLogStr time
+        <> toLogStr " "
+        <> toLogStr severity
+        <> toLogStr " "
+        <> toLogStr message
+        <> toLogStr "\n"
+    )
  where
   canLog = case (verbosity, severity) of
     (_     , Error) -> True
@@ -67,10 +85,14 @@ logError' = logMessage' Error
 logDebug' :: ToLogStr a => (TimedFastLogger, TimedFastLogger) -> Verbosity -> a -> IO ()
 logDebug' = logMessage' Debug
 
-logMessageM :: (MonadIO m, ToLogStr a, MonadReader r m, r ~ Bootstrapped) => Severity -> a -> m ()
+logMessageM
+  :: (MonadIO m, ToLogStr a, MonadReader r m, r ~ Bootstrapped) => Severity -> a -> m ()
 logMessageM severity message = do
   config <- ask
-  liftIO $ logMessage' severity (bootstrappedLoggers config) (configVerbosity . bootstrappedConfig $ config) message
+  liftIO $ logMessage' severity
+                       (bootstrappedLoggers config)
+                       (configVerbosity . bootstrappedConfig $ config)
+                       message
 
 logDebug :: (MonadIO m, ToLogStr a, MonadReader r m, r ~ Bootstrapped) => a -> m ()
 logDebug = logMessageM Debug

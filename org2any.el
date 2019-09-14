@@ -45,6 +45,7 @@
                                    "*org2any-log*"
                                    org2any/executable-path
                                    (buffer-file-name)
+                                   "--default-destination"
                                    args)))
       (setq org2any/running-processes
             (cons `(,(current-buffer) . ,org2any-process) org2any/running-processes))

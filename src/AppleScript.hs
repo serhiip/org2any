@@ -1,7 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE RecordWildCards #-}
 
 module AppleScript
   ( evalAppleScript
@@ -15,36 +13,41 @@ import           Command                        ( Command
                                                 )
 import           Control.Monad.Free             ( Free(..) )
 
-import           Data.Text                      ( Text
-                                                , pack
-                                                )
 import           System.Process.Typed           ( proc
                                                 , readProcess
                                                 )
 import           Types
 import           AppleScript.Internal
 import           System.Exit                    ( ExitCode(..) )
-import           Control.Monad.Except           ( throwError )
+import           Control.Monad.Except           ( throwError
+                                                , liftEither
+                                                )
+import           Data.Aeson                     ( eitherDecode )
+import           Data.Bifunctor                 ( first )
+import qualified Data.Set                      as S
 
 execute :: LByteString -> O2AM LByteString
 execute script = do
   (exitCode, out, err) <- liftIO . readProcess $ proc "/usr/bin/osascript" args
-  if exitCode == ExitSuccess then pure out else throwError $ SysCallError err
+  if exitCode == ExitSuccess then pure out else throwError $ SysCallError (decodeUtf8 err)
   where args = ["-l", "JavaScript", "-e", decodeUtf8 script]
 
 evalAppleScript :: Command x -> O2AM x
-evalAppleScript (Pure r         ) = return r
-evalAppleScript (Free (GetAll f)) = do
-  reminders <- decodeRemindersList <$> execute listAllScript
-  case reminders of
-    Left  err  -> throwError . SysCallError . encodeUtf8 @Text @LByteString . pack $ err
-    Right rems -> evalAppleScript . f $ rems
-evalAppleScript (Free CreateMany {..}) = do
-  _ <- execute . createManyScript $ convert <$> remindersToList rs
-  evalAppleScript x
-evalAppleScript (Free DeleteMany {..}) = do
-  _ <- execute . deleteManyScript $ convert <$> remindersToList rs
-  evalAppleScript x
-evalAppleScript (Free UpdateAll {..}) = do
-  _ <- execute . updateManyScript $ convert <$> remindersToList rs
-  evalAppleScript x
+evalAppleScript (Pure r                ) = return r
+evalAppleScript (Free (GetAll bucket f)) = do
+  decoded <- decodeRemindersList <$> execute (listAllScript $ bucketId bucket)
+  reminders <- liftEither $ first SysCallError decoded
+  evalAppleScript . f $ reminders
+evalAppleScript (Free (CreateMany bucket rs rest)) = do
+  _ <- execute . createManyScript (bucketId bucket) $ convert <$> remindersToList rs
+  evalAppleScript rest
+evalAppleScript (Free (DeleteMany bucket rs rest)) = do
+  _ <- execute . deleteManyScript (bucketId bucket) $ convert <$> remindersToList rs
+  evalAppleScript rest
+evalAppleScript (Free (UpdateAll bucket rs rest)) = do
+  _ <- execute . updateManyScript (bucketId bucket) $ convert <$> remindersToList rs
+  evalAppleScript rest
+evalAppleScript (Free (ListBuckets f)) = do
+  result  <- eitherDecode <$> execute listListsScript
+  buckets <- liftEither $ first (SysCallError . fromString) result
+  evalAppleScript . f . S.map convertBucket $ buckets

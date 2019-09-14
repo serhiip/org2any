@@ -1,5 +1,5 @@
 {-# OPTIONS_GHC -Wno-orphans -Wno-missing-signatures #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module LibSpec
   ( spec
@@ -36,13 +36,17 @@ instance Arbitrary Reminder where
   arbitrary = Reminder <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 eval :: Reminders -> Command x -> (Reminders, x)
-eval rems (Pure r              ) = (rems, r)
-eval rems (Free (GetAll f)     ) = eval rems . f $ rems
-eval rems (Free CreateMany {..}) = eval (rs <> rems) x
-eval rems (Free DeleteMany {..}) = let rems' = filter (not . (`elem` rs)) rems in eval rems' x
-eval rems (Free UpdateAll {..} ) = eval (rs `union` rems) x
+eval rems (Pure r                  ) = (rems, r)
+eval rems (Free (GetAll _ f       )) = eval rems . f $ rems
+eval rems (Free (CreateMany _ rs x)) = eval (rs <> rems) x
+eval rems (Free (DeleteMany _ rs x)) =
+  let rems' = filter (not . (`elem` rs)) rems in eval rems' x
+eval rems (Free (UpdateAll _ rs x)) = eval (rs `union` rems) x
+eval rems (Free (ListBuckets f   )) = eval rems . f $ singleton defaultBucket
 
 run = fst . uncurry eval
+
+defaultBucket = Bucket "1" "The List"
 
 spec :: Spec
 spec = describe "Commands" $ do
@@ -50,24 +54,24 @@ spec = describe "Commands" $ do
 
     it "should add new todos" $ property $ \r rs ->
       let _   = (r :: Reminder, rs :: Reminders)
-          rs' = run (rs, create r)
+          rs' = run (rs, create defaultBucket r)
       in  r `notElem` rs ==> r `elem` rs'
 
     it "should persist existing todos" $ property $ \r rs ->
       let _   = (r :: Reminder, rs :: Reminders)
-          rs' = run (rs, create r)
+          rs' = run (rs, create defaultBucket r)
       in  r `notElem` rs ==> length rs == length rs' - 1
 
     it "should not duplicate existing todos" $ property $ \r rs ->
       let _    = (r :: Reminder, rs :: Reminders)
           rs'' = insert r rs
-          rs'  = run (rs'', create r)
+          rs'  = run (rs'', create defaultBucket r)
       in  r `notElem` rs ==> length rs' == length rs''
 
   describe "del" $ it "should remove todos" $ property $ \r rs ->
     let _    = (r :: Reminder, rs :: Reminders)
         rs'' = insert r rs
-        rs'  = run (rs'', del r)
+        rs'  = run (rs'', del defaultBucket r)
     in  r `notElem` rs'
 
   describe "update" $ it "should update" $ property $ \rs ->
@@ -75,11 +79,11 @@ spec = describe "Commands" $ do
         nonZero = not (null rs)
         first   = elemAt 0 rs
         value   = pack "special name"
-        rs'     = run (rs, updateMany (singleton first { todoName = value }))
+        rs' = run (rs, updateMany defaultBucket (singleton first { todoName = value }))
         updated = not . null $ filter ((== value) . todoName) rs'
     in  nonZero ==> (length rs == length rs') && updated
 
   describe "sync" $ it "sync states of two lists" $ property $ \input state ->
     let _      = (input :: Reminders, state :: Reminders)
-        state' = run (state, sync input)
+        state' = run (state, sync (pure $ bucketName defaultBucket) input)
     in  input /= state ==> input == state'
