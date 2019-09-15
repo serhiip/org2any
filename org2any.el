@@ -34,6 +34,12 @@
 (defvar org2any/running-processes nil
   "Mapping from org buffers to running org2any processes.")
 
+(defconst org2any/id-field-name "ID"
+  "The field that will be used to store org id.")
+
+(defconst org2any/created-at-field-name "CREATED-AT"
+  "The field that will be used to store creation time of org records.")
+
 (defun org2any/start ()
   "Start org2any in file watch mode."
   (when (and
@@ -85,12 +91,18 @@
   (org-map-entries
    (lambda ()
      (org-with-point-at (point)
-       (let* ((id-field-name "ID")
-              (id (org-entry-get nil id-field-name)))
+       (let ((id (org-entry-get nil org2any/id-field-name))
+             (created-at (org-entry-get nil org2any/created-at-field-name)))
          (unless (and id (stringp id) (string-match "\\S-" id))
            (setq id (org-id-new))
-           (org-entry-put (point) id-field-name id)
-           (org-id-add-location id (buffer-file-name (buffer-base-buffer)))))))))
+           (org-entry-put (point) org2any/id-field-name id)
+           (org-id-add-location id (buffer-file-name (buffer-base-buffer))))
+         (unless (and created-at
+                      (-any-p (lambda (a) a) (parse-time-string created-at)))
+           (org-entry-put
+            (point)
+            org2any/created-at-field-name
+            (current-time-string))))))))
 
 (provide 'org2any)
 
