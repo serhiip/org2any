@@ -12,8 +12,9 @@ module Types
   , remindersFromList
   , remindersToList
   , remindersToMapping
-  , O2AM(..)
-  , runO2AM
+  , Result
+  , UnitResult
+  , runResult
   , SyncConfig(..)
   , Verbosity(..)
   , SyncError(..)
@@ -54,7 +55,10 @@ data Bootstrapped = Bootstrapped
   , bootstrappedOutput :: Chan ()
   }
 
-data SyncError = SysCallError Text | NoItemsError FilePath | InvalidDestinationError Text deriving (Show)
+data SyncError =
+    SysCallError Text
+  | NoItemsError FilePath
+  | InvalidDestinationError Text deriving (Show)
 
 data TodoStatus
   = Todo
@@ -96,8 +100,8 @@ remindersToMapping :: Reminders -> MS.Map T.Text Reminder
 remindersToMapping rems =
   MS.fromList $ (,) <$> todoId <*> id <$> toList @(Set Reminder) rems
 
-newtype O2AM a = O2AM
-  { getO2AM :: ExceptT SyncError (ReaderT Bootstrapped IO) a
+newtype ResultT m a = O2AMT
+  { getResultT :: ExceptT SyncError (ReaderT Bootstrapped m) a
   } deriving
   ( Functor
   , Applicative
@@ -109,5 +113,11 @@ newtype O2AM a = O2AM
   , MonadCatch
   )
 
-runO2AM :: Bootstrapped -> O2AM a -> IO (Either SyncError a)
-runO2AM config = usingReaderT config . runExceptT . getO2AM
+runResultT :: Monad m => Bootstrapped -> ResultT m a -> m (Either SyncError a)
+runResultT config = usingReaderT config . runExceptT . getResultT
+
+type Result = ResultT IO
+type UnitResult = Result ()
+
+runResult :: Bootstrapped -> Result a -> IO (Either SyncError a)
+runResult = runResultT

@@ -42,7 +42,7 @@ main = do
   send (SyncEvent path dst)
 
   _ <- forkIO . forever $ do
-    result <- runO2AM bootstrap execute
+    result <- runResult bootstrap execute
     whenLeft result error'
 
   unless toWatch $ send EndEvent

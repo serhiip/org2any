@@ -6,36 +6,36 @@ module AppleScript
   )
 where
 
-import           Universum
-
+import           AppleScript.Internal
 import           Command                        ( Command
                                                 , CommandF(..)
                                                 )
+import           Control.Monad.Except           ( throwError
+                                                , liftEither
+                                                )
 import           Control.Monad.Free             ( Free(..) )
-
+import           Data.Aeson                     ( eitherDecode )
+import           Data.Bifunctor                 ( first )
+import qualified Data.Set                      as S
+import           System.Exit                    ( ExitCode(..) )
 import           System.Process.Typed           ( proc
                                                 , readProcess
                                                 )
 import           Types
-import           AppleScript.Internal
-import           System.Exit                    ( ExitCode(..) )
-import           Control.Monad.Except           ( throwError
-                                                , liftEither
-                                                )
-import           Data.Aeson                     ( eitherDecode )
-import           Data.Bifunctor                 ( first )
-import qualified Data.Set                      as S
+import           Universum
 
-execute :: LByteString -> O2AM LByteString
+execute :: LByteString -> Result LByteString
 execute script = do
-  (exitCode, out, err) <- liftIO . readProcess $ proc "/usr/bin/osascript" args
-  if exitCode == ExitSuccess then pure out else throwError $ SysCallError (decodeUtf8 err)
-  where args = ["-l", "JavaScript", "-e", decodeUtf8 script]
+  (exitCode, out, err) <- liftIO . readProcess $ proc
+    "/usr/bin/osascript"
+    ["-l", "JavaScript", "-e", decodeUtf8 script]
+  unless (exitCode == ExitSuccess) $ throwError (SysCallError $ decodeUtf8 err)
+  return out
 
-evalAppleScript :: Command x -> O2AM x
+evalAppleScript :: Command x -> Result x
 evalAppleScript (Pure r                ) = return r
 evalAppleScript (Free (GetAll bucket f)) = do
-  decoded <- decodeRemindersList <$> execute (listAllScript $ bucketId bucket)
+  decoded   <- decodeRemindersList <$> execute (listAllScript $ bucketId bucket)
   reminders <- liftEither $ first SysCallError decoded
   evalAppleScript . f $ reminders
 evalAppleScript (Free (CreateMany bucket rs rest)) = do

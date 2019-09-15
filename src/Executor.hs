@@ -21,7 +21,7 @@ import           Parser                         ( reminders
 import           Types
 import           Universum
 
-execute :: O2AM ()
+execute :: UnitResult
 execute = do
   input  <- reader bootstrappedInput
   output <- reader bootstrappedOutput
@@ -33,16 +33,15 @@ execute = do
     SystemTerminatedEvent         -> logError "org2any was terminated" *> notifyEnd
     SyncEvent filePath dst        -> do
       logInfo $ "Processing " <> filePath
-      fileContents <- (try . readFile) filePath :: O2AM (Either IOException Text)
-      contents     <- liftEither $ first (SysCallError . show) fileContents
-      orgTree      <- liftEither $ runParser contents
+      readResult <- (try . readFile) filePath :: Result (Either IOException Text)
+      contents   <- liftEither $ first (SysCallError . show) readResult
+      orgTree    <- liftEither $ runParser contents
 
       let items = reminders orgTree
 
-      evald <- if null items
-               then throwError (NoItemsError filePath)
-               else evalAppleScript . sync dst $ items
+      when (null items) $ throwError (NoItemsError filePath)
 
-      liftEither evald
+      result <- evalAppleScript . sync dst $ items
+      liftEither result
 
       logDebug "Done"
