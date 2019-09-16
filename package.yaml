@@ -38,6 +38,7 @@ dependencies:
 - mtl == 2.2.2
 - fast-logger == 2.4.16
 - time == 1.8.0.2
+- unix == 2.7.2.2
 
 
 library:

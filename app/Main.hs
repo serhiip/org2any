@@ -1,4 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude #-}
+{-#LANGUAGE TypeApplications #-}
 
 module Main where
 
@@ -7,7 +8,9 @@ import           Args                           ( Action(..)
                                                 , arguments
                                                 , execParser
                                                 )
-import           Control.Concurrent             ( forkIO )
+import           Control.Concurrent             ( forkIO
+                                                , killThread
+                                                )
 import           Control.Concurrent.Chan        ( newChan
                                                 , writeChan
                                                 , readChan
@@ -20,6 +23,14 @@ import           System.FSNotify         hiding ( Action )
 import           System.FilePath
 import           Types
 import           Universum
+import           System.Posix.Signals           ( sigTERM
+                                                , sigINT
+                                                , installHandler
+                                                , Handler(..)
+                                                )
+import           Control.Exception              ( AsyncException(..)
+                                                , handle
+                                                )
 
 main :: IO ()
 main = do
@@ -36,6 +47,10 @@ main = do
       debug     = logDebug' loggers verbosity
       info      = logInfo' loggers verbosity
       error'    = logError' loggers verbosity
+      term      = CatchOnce $ send SystemTerminatedEvent
+
+  _ <- installHandler sigTERM term Nothing
+  _ <- installHandler sigINT term Nothing
 
   debug $ "Arguments " <> show args
 
@@ -47,17 +62,22 @@ main = do
 
   unless toWatch $ send EndEvent
 
-  when toWatch $ withManagerConf defaultConfig $ \manager -> do
-    watchManagerCleanUp <- watchDir manager
-                                    (takeDirectory path)
-                                    (equalFilePath canonPath . eventPath)
-                                    (const $ send (SyncEvent path dst))
-    info "📝 Listening for changes... Press any key to stop"
-    line <- getLine
-    debug "Stopping file watcher"
-    watchManagerCleanUp
-    send $ UserTerminatedEvent line
+  watcher <- forkIO . when toWatch $ withManagerConf
+    defaultConfig
+    (\manager -> do
+      watchManagerCleanUp <- watchDir manager
+                                      (takeDirectory path)
+                                      (equalFilePath canonPath . eventPath)
+                                      (const $ send (SyncEvent path dst))
+      let stop = watchManagerCleanUp >> debug "File watcher was stopped"
+      handle @AsyncException (const stop) $ do
+        info "📝 Listening for changes... Press any key to stop"
+        line <- getLine
+        stop
+        send $ UserTerminatedEvent line
+    )
 
   readChan outputChan
-  debug "Cleaning up logging handlers"
+  killThread watcher
+  debug "Logging handlers cleaned up"
   loggingCleanUp
