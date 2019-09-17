@@ -56,10 +56,9 @@ updateMany bid rs = liftF $ UpdateAll bid rs ()
 listBuckets :: Command Buckets
 listBuckets = liftF $ ListBuckets id
 
-sync :: Maybe BucketId -> Reminders -> Command (Either SyncError ())
-sync bId toSync = do
+sync :: BucketId -> Reminders -> Command (Either SyncError ())
+sync name toSync = do
   buckets <- listBuckets
-  let name = bId ?: "Reminders"
   case
       head
         <$> (nonEmpty . S.elems . S.filter ((== name) . bucketName))

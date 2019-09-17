@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Executor
   ( execute
   )
@@ -12,6 +14,7 @@ import           Control.Exception              ( IOException )
 import           Control.Monad.Except           ( throwError
                                                 , liftEither
                                                 )
+import           Data.Text                      ( pack )
 import           Logging
 import           Parser                         ( reminders
                                                 , runParser
@@ -28,7 +31,9 @@ execute = do
   case event of
     EndEvent                      -> notifyEnd
     UserTerminatedEvent lastWords -> logDebug lastWords *> notifyEnd
-    SystemTerminatedEvent         -> logError "org2any was terminated" *> notifyEnd
+    SystemTerminatedEvent         -> logError
+                                     (pack "org2any was terminated")
+                                     *> notifyEnd
     SyncEvent filePath dst        -> do
       logInfo $ "Processing " <> filePath
       readResult <- (try . readFile) filePath :: Result (Either IOException Text)
@@ -36,10 +41,12 @@ execute = do
       orgTree    <- liftEither $ runParser contents
 
       let items = reminders orgTree
+          name  = dst ?: "Reminders"
+
 
       when (null items) $ throwError (NoItemsError filePath)
 
-      result <- evalAppleScript . sync dst $ items
+      result <- evalAppleScript . sync name $ items
       liftEither result
 
-      logDebug "Done"
+      logDebug $ "Done synchronizing " <> show filePath <> " to " <> name

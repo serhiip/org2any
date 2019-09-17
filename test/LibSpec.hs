@@ -87,5 +87,5 @@ spec = describe "Commands" $ do
 
   describe "sync" $ it "sync states of two lists" $ property $ \input state ->
     let _      = (input :: Reminders, state :: Reminders)
-        state' = run (state, sync (pure $ bucketName defaultBucket) input)
+        state' = run (state, sync (bucketName defaultBucket) input)
     in  input /= state ==> input == state'
