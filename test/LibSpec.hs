@@ -18,13 +18,15 @@ import           Data.Set                       ( elemAt
 import           Data.Text                      ( Text
                                                 , pack
                                                 )
-import           Prelude                 hiding ( filter
-                                                , foldl
-                                                , null
-                                                )
 import           Test.Hspec
 import           Test.QuickCheck
 import           Types
+import           Universum               hiding ( filter
+                                                , foldl
+                                                , null
+                                                , state
+                                                , first
+                                                )
 
 instance Arbitrary Text where
   arbitrary = pack <$> arbitrary

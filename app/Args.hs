@@ -1,6 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
-
-
 module Args
   ( Args(..)
   , Action(..)

@@ -1,5 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude #-}
-{-#LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Main where
 

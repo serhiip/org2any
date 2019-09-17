@@ -5,6 +5,7 @@ module AppleScriptSpec where
 import           AppleScript.Internal
 import           Test.Hspec
 import           Types
+import           Universum
 
 remindersSpec :: Spec
 remindersSpec = describe "Reminders.App MacOS command generator" $ do
