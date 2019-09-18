@@ -34,11 +34,17 @@
 (defvar org2any/running-processes nil
   "Mapping from org buffers to running org2any processes.")
 
+(defvar org2any/org-hashes nil
+  "Mapping from org id to hashed content.")
+
 (defconst org2any/id-field-name "ID"
   "The field that will be used to store org id.")
 
 (defconst org2any/created-at-field-name "CREATED-AT"
   "The field that will be used to store creation time of org records.")
+
+(defconst org2any/updated-at-field-name "UPDATED-AT"
+  "Updeted at property name.")
 
 (defun org2any/start ()
   "Start org2any in file watch mode."
@@ -73,6 +79,35 @@
       (remove-hook 'kill-buffer-hook 'org2any/teardown)
       (remove-hook 'before-save-hook 'org2any/maybe-add-org-ids))))
 
+(add-hook 'org-mode-hook 'org2any/populate-all-hashes)
+
+(defun org2any/populate-all-hashes ()
+  "Populate missing hashes in current org file."
+  (when (org2any/enabled-p)
+    (org-map-entries
+     (lambda ()
+       (org-with-point-at (point)
+         (org2any/know-org-hash
+          (org-entry-get nil org2any/id-field-name)
+          (sxhash (org-get-entry))))))))
+
+(defun org2any/know-org-hash (id hash)
+  "Record org item identified by ID HASH."
+  (when (and id hash)
+    (setq org2any/org-hashes
+          (cons `(,id . ,hash) org2any/org-hashes))))
+
+(defun org2any/populate-created-at (created-at)
+  "Populate created at field of org entry at point by cheking CREATED-AT first."
+  (unless (and created-at (-any-p (lambda (a) a) (parse-time-string created-at)))
+    (org-entry-put (point) org2any/created-at-field-name (current-time-string))))
+
+(defun org2any/enabled-p ()
+  "Is org2any integration is enabled in current buffer."
+  (and (eq major-mode 'org-mode)
+             (eq buffer-read-only nil)
+             (org2any/file-tracked-p)))
+
 (defun org2any/file-tracked-p ()
   "Check if current file is set up for atutomatic synchronization."
   (-any-p
@@ -81,9 +116,7 @@
 
 (defun org2any/maybe-add-org-ids ()
   "Add identifiers to org items if buffer is matched."
-  (when (and (eq major-mode 'org-mode)
-             (eq buffer-read-only nil)
-             (org2any/file-tracked-p))
+  (when (org2any/enabled-p)
     (org2any/add-ids-to-items-in-current-file)))
 
 (defun org2any/add-ids-to-items-in-current-file ()
@@ -91,18 +124,30 @@
   (org-map-entries
    (lambda ()
      (org-with-point-at (point)
-       (let ((id (org-entry-get nil org2any/id-field-name))
-             (created-at (org-entry-get nil org2any/created-at-field-name)))
+       (let* ((id (org-entry-get nil org2any/id-field-name))
+              (created-at (org-entry-get nil org2any/created-at-field-name))
+              (updated-at (org-entry-get nil org2any/updated-at-field-name))
+              (hash (org2any/entry-hash))
+              (old-hash (cdr (assoc id org2any/org-hashes))))
+
          (unless (and id (stringp id) (string-match "\\S-" id))
            (setq id (org-id-new))
            (org-entry-put (point) org2any/id-field-name id)
            (org-id-add-location id (buffer-file-name (buffer-base-buffer))))
-         (unless (and created-at
-                      (-any-p (lambda (a) a) (parse-time-string created-at)))
+
+         (org2any/populate-created-at created-at)
+
+         (if updated-at
+             (unless (eq hash old-hash)
+               (org-entry-put
+                (point) org2any/updated-at-field-name (current-time-string)))
            (org-entry-put
-            (point)
-            org2any/created-at-field-name
-            (current-time-string))))))))
+            (point) org2any/updated-at-field-name (current-time-string)))
+         (org2any/know-org-hash id (org2any/entry-hash)))))))
+
+(defun org2any/entry-hash ()
+  "Calculate the hash of current org entry."
+  (+ (sxhash (org-get-entry)) (sxhash (org-get-heading))))
 
 (provide 'org2any)
 
