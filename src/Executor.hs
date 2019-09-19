@@ -43,7 +43,6 @@ execute = do
       let items = reminders orgTree
           name  = dst ?: "Reminders"
 
-
       when (null items) $ throwError (NoItemsError filePath)
 
       result <- evalAppleScript . sync name $ items
