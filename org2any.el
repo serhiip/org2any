@@ -46,19 +46,24 @@
 (defconst org2any/updated-at-field-name "UPDATED-AT"
   "Updeted at property name.")
 
+(defun org2any/start-process (file-name args)
+  "Start org2any process using for FILE-NAME passing it ARGS."
+  (apply 'start-process
+         "org2any-process"
+         "*org2any-log*"
+         org2any/executable-path
+         file-name
+         "--default-destination"
+         args))
+
 (defun org2any/start ()
   "Start org2any in file watch mode."
   (when (and
          (not (assoc (current-buffer) org2any/running-processes))
          (org2any/file-tracked-p))
     (let* ((args (-non-nil `("-w" ,org2any/verbosity)))
-           (org2any-process (apply 'start-process
-                                   "org2any-process"
-                                   "*org2any-log*"
-                                   org2any/executable-path
-                                   (buffer-file-name)
-                                   "--default-destination"
-                                   args)))
+           (org2any-process
+            (org2any/start-process (buffer-file-name) args)))
       (setq org2any/running-processes
             (cons `(,(current-buffer) . ,org2any-process) org2any/running-processes))
       (add-hook 'kill-buffer-hook 'org2any/teardown)
@@ -98,15 +103,17 @@
           (cons `(,id . ,hash) org2any/org-hashes))))
 
 (defun org2any/populate-created-at (created-at)
-  "Populate created at field of org entry at point by cheking CREATED-AT first."
+  "Populate createsd at field of org entry at point by cheking CREATED-AT first."
   (unless (and created-at (-any-p (lambda (a) a) (parse-time-string created-at)))
     (org-entry-put (point) org2any/created-at-field-name (current-time-string))))
 
 (defun org2any/enabled-p ()
   "Is org2any integration is enabled in current buffer."
-  (and (eq major-mode 'org-mode)
-             (eq buffer-read-only nil)
-             (org2any/file-tracked-p)))
+  (and
+   (eq major-mode 'org-mode)
+   (eq buffer-read-only nil)
+   (org2any/file-tracked-p)
+   (file-exists-p (buffer-file-name (current-buffer)))))
 
 (defun org2any/file-tracked-p ()
   "Check if current file is set up for atutomatic synchronization."
@@ -148,6 +155,60 @@
 (defun org2any/entry-hash ()
   "Calculate the hash of current org entry."
   (+ (sxhash (org-get-entry)) (sxhash (org-get-heading))))
+
+
+;;; Tests:
+
+(defvar org2any/--org2any-started 0
+  "Count of times org2any process have been started.")
+
+(defun org2any/--setq-fixture (sym value test-body)
+  "Temporary set SYM to VALUE and execute TEST-BODY."
+  (let ((original-value (symbol-value sym)))
+    (unwind-protect
+        (progn
+          (set sym value)
+          (funcall test-body))
+      (set sym original-value))))
+
+(defun org2any/--with-file (file-name body)
+  "Create file name FILE-NAME and execute BODY deleting FILE-NAME afterwards."
+  (cl-letf (((symbol-function 'start-process)
+             (lambda (&rest args)
+               (setq org2any/--org2any-started (+ org2any/--org2any-started 1)))))
+    (org2any/--setq-fixture
+     'org2any/autosync-files-regexes
+     '("^.*/?test.file.org$")
+     (lambda ()
+       (unwind-protect
+           (progn
+             (let ((buff (find-file file-name)))
+               (insert "* Test org item")
+               (save-buffer)
+               (funcall body buff)))
+         (progn
+           (delete-file file-name)
+           (kill-buffer file-name)
+           (setq org2any/--org2any-started 0)))))))
+
+(ert-deftest test-org2any-is-started-when-tracked-file-is-open ()
+  (org2any/--with-file
+   "test.file.org"
+   (lambda (buff)
+     (switch-to-buffer buff)
+     (org-map-entries
+      (lambda ()
+        (org-with-point-at (point)
+          (should (equal
+                   (car (cddddr (org-heading-components)))
+                   "Test org item"))
+          (should (equal org2any/--org2any-started 1))))))))
+
+(ert-deftest test-org2any-is-not-started-when-not-tracked-org-file-is-open ()
+  (org2any/--with-file
+   "test.not-tracked.org"
+   (lambda (buff)
+     (should (equal org2any/--org2any-started 0)))))
 
 (provide 'org2any)
 
