@@ -183,6 +183,7 @@
        (unwind-protect
            (progn
              (let ((buff (find-file file-name)))
+               (save-buffer)
                (insert "* Test org item")
                (save-buffer)
                (funcall body buff)))
@@ -209,6 +210,54 @@
    "test.not-tracked.org"
    (lambda (buff)
      (should (equal org2any/--org2any-started 0)))))
+
+(ert-deftest org2any/--test-id-is-populated ()
+  (org2any/--with-file
+   "test.file.org"
+   (lambda (buff)
+     (switch-to-buffer buff)
+     (org-map-entries
+      (lambda ()
+        (org-with-point-at (point)
+          (should (org-entry-get nil org2any/id-field-name))))))))
+
+(ert-deftest org2any/--test-created-at-is-populated ()
+  (org2any/--with-file
+   "test.file.org"
+   (lambda (buff)
+     (switch-to-buffer buff)
+     (org-map-entries
+      (lambda ()
+        (org-with-point-at (point)
+          (should (org-entry-get nil org2any/created-at-field-name))))))))
+
+(ert-deftest org2any/--test-updated-at-is-populated ()
+  (org2any/--with-file
+   "test.file.org"
+   (lambda (buff)
+     (switch-to-buffer buff)
+     (org-map-entries
+      (lambda ()
+        (org-with-point-at (point)
+          (should (org-entry-get nil org2any/updated-at-field-name))))))))
+
+(ert-deftest org2any/--test-updated-at-is-changed-when-contents-changed ()
+  (org2any/--with-file
+   "test.file.org"
+   (lambda (buff)
+     (switch-to-buffer buff)
+     (org-with-point-at (point)
+       (let ((old-updated-at (org-entry-get nil org2any/updated-at-field-name)))
+         (move-end-of-line nil)
+         (insert " modified")
+         (move-beginning-of-line nil)
+         ;; TODO: figure out better way
+         (sleep-for 1)
+         (save-buffer)
+         (org-with-point-at (point)
+           (should-not (equal
+                        old-updated-at
+                        (org-entry-get nil org2any/updated-at-field-name)))))))))
 
 (provide 'org2any)
 
