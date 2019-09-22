@@ -192,7 +192,7 @@
            (kill-buffer file-name)
            (setq org2any/--org2any-started 0)))))))
 
-(ert-deftest test-org2any-is-started-when-tracked-file-is-open ()
+(ert-deftest org2any/--org2any-is-started-when-tracked-file-is-open ()
   (org2any/--with-file
    "test.file.org"
    (lambda (buff)
@@ -205,13 +205,13 @@
                    "Test org item"))
           (should (equal org2any/--org2any-started 1))))))))
 
-(ert-deftest test-org2any-is-not-started-when-not-tracked-org-file-is-open ()
+(ert-deftest org2any/--org2any-is-not-started-when-not-tracked-org-file-is-open ()
   (org2any/--with-file
    "test.not-tracked.org"
    (lambda (buff)
      (should (equal org2any/--org2any-started 0)))))
 
-(ert-deftest org2any/--test-id-is-populated ()
+(ert-deftest org2any/--id-is-populated ()
   (org2any/--with-file
    "test.file.org"
    (lambda (buff)
@@ -231,7 +231,7 @@
         (org-with-point-at (point)
           (should (org-entry-get nil org2any/created-at-field-name))))))))
 
-(ert-deftest org2any/--test-updated-at-is-populated ()
+(ert-deftest org2any/--updated-at-is-populated ()
   (org2any/--with-file
    "test.file.org"
    (lambda (buff)
@@ -241,7 +241,7 @@
         (org-with-point-at (point)
           (should (org-entry-get nil org2any/updated-at-field-name))))))))
 
-(ert-deftest org2any/--test-updated-at-is-changed-when-contents-changed ()
+(ert-deftest org2any/--updated-at-is-changed-when-contents-changed ()
   (org2any/--with-file
    "test.file.org"
    (lambda (buff)
