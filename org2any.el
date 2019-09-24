@@ -259,6 +259,31 @@
                         old-updated-at
                         (org-entry-get nil org2any/updated-at-field-name)))))))))
 
+(ert-deftest org2any/--updated-at-is-changed-only-for-entity-that-is-actually-changed ()
+  (org2any/--with-file
+   "test.file.org"
+   (lambda (buff)
+     (switch-to-buffer buff)
+     (move-end-of-line nil)
+     (newline)
+     (insert "* new item")
+     (save-buffer)
+     (forward-line -1)
+     (org-with-point-at (point)
+       (let ((old-updated-at (org-entry-get nil org2any/updated-at-field-name)))
+         (forward-line 1)
+         (end-of-line)
+         (insert " modified")
+         (sleep-for 1)
+         (save-buffer)
+         (forward-line -1)
+         (print (buffer-string))
+         (org-with-point-at (point)
+           (should (equal
+                    old-updated-at
+                    (org-entry-get nil org2any/updated-at-field-name)))))))))
+
+
 (provide 'org2any)
 
 ;;; org2any.el ends here
