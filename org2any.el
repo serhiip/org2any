@@ -1,6 +1,7 @@
 ;;; org2any.el --- Integration of org2any utility into Emacs -*- coding: utf-8 -*-
 
-;; Package-Requires: ((dash "2.12.0"))
+;; Package-Requires: ((dash "20190920.1035"))
+;; Version: 0.0.1
 
 ;;; Commentary:
 
@@ -85,6 +86,7 @@
       (remove-hook 'before-save-hook 'org2any/maybe-add-org-ids))))
 
 (add-hook 'org-mode-hook 'org2any/populate-all-hashes)
+(add-hook 'org-mode-hook 'org2any/start)
 
 (defun org2any/populate-all-hashes ()
   "Populate missing hashes in current org file."
@@ -277,7 +279,6 @@
          (sleep-for 1)
          (save-buffer)
          (forward-line -1)
-         (print (buffer-string))
          (org-with-point-at (point)
            (should (equal
                     old-updated-at
