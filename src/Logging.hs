@@ -40,6 +40,11 @@ instance ToLogStr SyncError where
     toLogStr $ "There was an error getting reminders from "
     <> unpack destination
     <> ". Try specifying different name"
+  toLogStr (DecodeError raw err) = toLogStr $
+    "Error decoding output "
+    <> show raw
+    <> " got errror "
+    <> show err
 
 data Severity = Debug | Info | Error deriving (Show, Eq, Ord)
 

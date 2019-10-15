@@ -22,20 +22,23 @@ import           System.Process.Typed           ( proc
                                                 )
 import           Types
 import           Universum
+import           Logging
 
 execute :: LByteString -> Result LByteString
 execute script = do
   (exitCode, out, err) <- liftIO . readProcess $ proc
     "/usr/bin/osascript"
     ["-l", "JavaScript", "-e", decodeUtf8 script]
+  logDebug $ "Executing AppleScript \n" <> script
   unless (exitCode == ExitSuccess) $ throwError (SysCallError $ decodeUtf8 err)
   return out
 
 evalAppleScript :: Command x -> Result x
 evalAppleScript (Pure r                ) = return r
 evalAppleScript (Free (GetAll bucket f)) = do
-  decoded   <- decodeRemindersList <$> execute (listAllScript $ bucketId bucket)
-  reminders <- liftEither $ first SysCallError decoded
+  raw <- execute (listAllScript $ bucketId bucket)
+  let decoded = decodeRemindersList raw
+  reminders <- liftEither $ first (DecodeError $ decodeUtf8 raw) decoded
   evalAppleScript . f $ reminders
 evalAppleScript (Free (CreateMany bucket rs rest)) = do
   _ <- execute . createManyScript (bucketId bucket) $ convert <$> remindersToList rs

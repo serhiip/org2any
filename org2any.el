@@ -11,6 +11,7 @@
 
 (setq lexical-binding t)
 
+(require 'ert)
 (require 'dash)
 (require 'org)
 (require 'org-id)

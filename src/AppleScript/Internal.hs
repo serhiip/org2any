@@ -43,7 +43,7 @@ import           Universum
 
 convert :: Reminder -> A.Reminder
 convert r = A.Reminder (todoId r)
-                       (todoBody r)
+                       (Just $ todoBody r)
                        (Just Done == todoStatus r)
                        (todoName r)
                        0
@@ -59,7 +59,7 @@ convertBucket (A.ReminderList bid name) = Bucket bid name
 instance FromJSON A.Reminder where
   parseJSON = withObject "Todo" $ \v -> A.Reminder
     <$> v .: "id"
-    <*> v .: "body"
+    <*> v .:? "body"
     <*> v .: "completed"
     <*> v .: "name"
     <*> v .: "priority"

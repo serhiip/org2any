@@ -18,7 +18,7 @@ data ReminderList = ReminderList {
 
 data Reminder = Reminder {
     todoId :: Text
-  , todoBody :: Text
+  , todoBody :: Maybe Text
   , todoCompleted :: Bool
   , todoName :: Text
   , todoPriority :: Int

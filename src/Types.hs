@@ -57,7 +57,8 @@ data Bootstrapped = Bootstrapped
 data SyncError =
     SysCallError Text
   | NoItemsError FilePath
-  | InvalidDestinationError Text deriving (Show)
+  | InvalidDestinationError Text
+  | DecodeError Text Text deriving (Show)
 
 data TodoStatus
   = Todo
