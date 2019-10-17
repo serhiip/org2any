@@ -8,8 +8,6 @@ module Types
   , Buckets
   , TodoStatus(..)
   , Event(..)
-  , remindersFromList
-  , remindersToList
   , remindersToMapping
   , Result
   , UnitResult
@@ -19,6 +17,7 @@ module Types
   , SyncError(..)
   , Bootstrapped(..)
   , Bucket(..)
+  , OrgLike(..)
   )
 where
 
@@ -26,9 +25,6 @@ import           Control.Concurrent.Chan        ( Chan )
 import           Control.Monad.Except           ( MonadError(..) )
 import           Data.Function                  ( on )
 import qualified Data.Map.Strict               as MS
-import           Data.Set                       ( fromList
-                                                , Set
-                                                )
 import qualified Data.Text                     as T
 import           System.FilePath                ( FilePath )
 import           System.Log.FastLogger          ( TimedFastLogger )
@@ -70,7 +66,7 @@ data TodoStatus
 data Reminder = Reminder
   { todoName   :: T.Text
   , todoId     :: T.Text
-  , todoBody   :: T.Text
+  , todoBody   :: Maybe T.Text
   , todoStatus :: Maybe TodoStatus
   } deriving (Show)
 
@@ -80,7 +76,7 @@ instance Eq Reminder where
 instance Ord Reminder where
   compare = compare `on` todoId
 
-type Reminders = Set Reminder
+type Reminders = [Reminder]
 
 type BucketId = Text
 
@@ -88,17 +84,18 @@ data Bucket = Bucket { bucketId :: BucketId
                      , bucketName :: Text
                      } deriving (Show, Eq, Ord)
 
-type Buckets = Set Bucket
-
-remindersFromList :: [Reminder] -> Reminders
-remindersFromList = fromList
-
-remindersToList :: Reminders -> [Reminder]
-remindersToList = toList @(Set Reminder)
+type Buckets = [Bucket]
 
 remindersToMapping :: Reminders -> MS.Map T.Text Reminder
-remindersToMapping rems =
-  MS.fromList $ (,) <$> todoId <*> id <$> toList @(Set Reminder) rems
+remindersToMapping rems = MS.fromList $ (,) <$> todoId <*> id <$> rems
+
+class OrgLike a where
+  from :: a -> Reminder
+  to :: Reminder -> a
+
+instance OrgLike Reminder where
+  from = id
+  to = id
 
 newtype ResultT m a = O2AMT
   { getResultT :: ExceptT SyncError (ReaderT Bootstrapped m) a

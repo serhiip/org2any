@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module AppleScript.Internal
@@ -9,7 +10,6 @@ module AppleScript.Internal
   , updateManyScript
   , decodeRemindersList
   , listListsScript
-  , convert
   , convertBucket
   )
 where
@@ -35,26 +35,29 @@ import           Data.Text                      ( splitOn
 import           Types                          ( Reminders
                                                 , Reminder(..)
                                                 , TodoStatus(..)
-                                                , remindersFromList
                                                 , BucketId
                                                 , Bucket(..)
+                                                , OrgLike(..)
                                                 )
 import           Universum
 
-convert :: Reminder -> A.Reminder
-convert r = A.Reminder (todoId r)
-                       (Just $ todoBody r)
-                       (Just Done == todoStatus r)
-                       (todoName r)
+convertBucket :: A.ReminderList -> Bucket
+convertBucket (A.ReminderList bid name) = Bucket bid name
+
+instance OrgLike A.Reminder where
+  from A.Reminder{..} = Reminder todoName todoId todoBody (Just status)
+    where status = if todoCompleted then Done else InProgress
+
+  to Reminder{..} = A.Reminder todoId
+                       todoBody
+                       (Just Done == todoStatus)
+                       todoName
                        0
                        Nothing
                        Nothing
                        Nothing
                        Nothing
                        Nothing
-
-convertBucket :: A.ReminderList -> Bucket
-convertBucket (A.ReminderList bid name) = Bucket bid name
 
 instance FromJSON A.Reminder where
   parseJSON = withObject "Todo" $ \v -> A.Reminder
@@ -179,7 +182,7 @@ decodeRemindersList t = do
   let names = A.todoName <$> decoded
       rems  = make . splitOn "|" <$> names
 
-  return $ remindersFromList rems
+  return rems
  where
-  make (name : id' : _) = Reminder (strip name) id' "a" (pure Todo)
+  make (name : id' : _) = Reminder (strip name) id' (Just "a") (pure Todo) -- TODO
   make _                = error "should not happen"

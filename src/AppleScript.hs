@@ -15,7 +15,6 @@ import           Control.Monad.Except           ( throwError
 import           Control.Monad.Free             ( Free(..) )
 import           Data.Aeson                     ( eitherDecode )
 import           Data.Bifunctor                 ( first )
-import qualified Data.Set                      as S
 import           System.Exit                    ( ExitCode(..) )
 import           System.Process.Typed           ( proc
                                                 , readProcess
@@ -41,15 +40,15 @@ evalAppleScript (Free (GetAll bucket f)) = do
   reminders <- liftEither $ first (DecodeError $ decodeUtf8 raw) decoded
   evalAppleScript . f $ reminders
 evalAppleScript (Free (CreateMany bucket rs rest)) = do
-  _ <- execute . createManyScript (bucketId bucket) $ convert <$> remindersToList rs
+  _ <- execute . createManyScript (bucketId bucket) $ to <$> rs
   evalAppleScript rest
 evalAppleScript (Free (DeleteMany bucket rs rest)) = do
-  _ <- execute . deleteManyScript (bucketId bucket) $ convert <$> remindersToList rs
+  _ <- execute . deleteManyScript (bucketId bucket) $ to <$> rs
   evalAppleScript rest
 evalAppleScript (Free (UpdateAll bucket rs rest)) = do
-  _ <- execute . updateManyScript (bucketId bucket) $ convert <$> remindersToList rs
+  _ <- execute . updateManyScript (bucketId bucket) $ to <$> rs
   evalAppleScript rest
 evalAppleScript (Free (ListBuckets f)) = do
   result  <- eitherDecode <$> execute listListsScript
   buckets <- liftEither $ first (SysCallError . fromString) result
-  evalAppleScript . f . S.map convertBucket $ buckets
+  evalAppleScript . f . fmap convertBucket $ buckets

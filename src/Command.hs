@@ -15,9 +15,15 @@ module Command
 where
 
 import           Control.Monad.Free
-import qualified Data.Set                      as S
 import           Types
-import           Universum
+import           Universum               hiding ( elem
+                                                , notElem
+                                                )
+import           Data.List                      ( partition
+                                                , elem
+                                                , notElem
+                                                , filter
+                                                )
 
 data CommandF x =
     GetAll Bucket (Reminders -> x)
@@ -38,42 +44,45 @@ type Command = Free CommandF
 list :: Bucket -> Command Reminders
 list bid = liftF $ GetAll bid id
 
-create :: Bucket -> Reminder -> Command ()
-create bid = createMany bid . S.singleton
+create :: OrgLike a => Bucket -> a -> Command (Either SyncError ())
+create bid = createMany bid . pure . from
 
-createMany :: Bucket -> Reminders -> Command ()
-createMany bid rs = liftF $ CreateMany bid rs ()
+createMany :: OrgLike a => Bucket -> [a] -> Command (Either SyncError ())
+createMany bid@(Bucket _ name) rs = do
+  buckets <- listBuckets
+  case head <$> (nonEmpty . filter ((== name) . bucketName)) buckets of
+    Just bucket -> do
+      existing <- list bucket
+      let toCreate = filter (`notElem` existing) (from <$> rs)
+      liftF $ Right <$> CreateMany bid toCreate ()
+    Nothing -> return . Left . InvalidDestinationError $ name
 
-del :: Bucket -> Reminder -> Command ()
-del bid = delMany bid . S.singleton
+del :: OrgLike a => Bucket -> a -> Command ()
+del bid r = delMany bid [r]
 
-delMany :: Bucket -> Reminders -> Command ()
-delMany bid rs = liftF $ DeleteMany bid rs ()
+delMany :: OrgLike a => Bucket -> [a] -> Command ()
+delMany bid rs = liftF $ DeleteMany bid (from <$> rs) ()
 
-updateMany :: Bucket -> Reminders -> Command ()
-updateMany bid rs = liftF $ UpdateAll bid rs ()
+updateMany :: OrgLike a => Bucket -> [a] -> Command ()
+updateMany bid rs = liftF $ UpdateAll bid (from <$> rs) ()
 
 listBuckets :: Command Buckets
 listBuckets = liftF $ ListBuckets id
 
-sync :: BucketId -> Reminders -> Command (Either SyncError ())
+sync :: OrgLike a => BucketId -> [a] -> Command (Either SyncError ())
 sync name toSync = do
   buckets <- listBuckets
-  case
-      head
-        <$> (nonEmpty . S.elems . S.filter ((== name) . bucketName))
-              buckets
-    of
-      Just bucket -> do
-        existing <- list bucket
-        let (updates, creations) = S.partition (`elem` existing) toSync
-            deletions            = S.filter (`notElem` toSync) existing
+  case head <$> (nonEmpty . filter ((== name) . bucketName)) buckets of
+    Just bucket -> do
+      existing <- list bucket
+      let toSync'              = from <$> toSync
+          (updates, creations) = partition (`elem` existing) toSync'
+          deletions            = filter (`notElem` toSync') existing
 
-        delMany bucket deletions
-        updateMany bucket updates
-        createMany bucket creations
-        return $ Right ()
-      Nothing -> return . Left . InvalidDestinationError $ name
+      delMany bucket deletions
+      updateMany bucket updates
+      createMany bucket creations
+    Nothing -> return . Left . InvalidDestinationError $ name
 
 runDry :: Command x -> IO x
 runDry (Pure r) = return r
