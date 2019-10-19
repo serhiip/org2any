@@ -1,3 +1,13 @@
+{-|
+Module      : Types
+Description : Definitions representing common datatypes
+License     : GPL-3
+Maintainer  : Serhii <serhii@proximala.bz>
+Stability   : experimental
+
+Reminder item internal represenatation, main transformer stack and configuration datatypes.
+-}
+
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Types
@@ -9,7 +19,6 @@ module Types
   , Event(..)
   , remindersToMapping
   , Result
-  , UnitResult
   , runResult
   , SyncConfig(..)
   , Verbosity(..)
@@ -26,42 +35,90 @@ import           Data.Function                  ( on )
 import qualified Data.Map.Strict               as MS
 import qualified Data.Text                     as T
 import           System.FilePath                ( FilePath )
-import           System.Log.FastLogger          ( TimedFastLogger )
+import           System.Log.FastLogger          ( TimedFastLogger
+                                                , ToLogStr(..)
+                                                )
 import           Universum
 
-data Verbosity = Normal | Verbose | Quiet deriving (Show, Eq)
-
-data Event =
-    UserTerminatedEvent T.Text
-  | SystemTerminatedEvent
-  | SyncEvent FilePath (Maybe Text)
-  | EndEvent
+-- | The amount of logging output 
+data Verbosity
+  = Normal
+  | Verbose
+  | Quiet
   deriving (Show, Eq)
 
+-- | Events coming from outside world (user or system)
+data Event
+  = UserTerminatedEvent T.Text
+  -- ^ User requested the program termination
+  | SystemTerminatedEvent
+  -- ^ SIGINT or SIGTERM received from OS
+  | SyncEvent FilePath (Maybe Text)
+  -- ^ User request to synchronize a file
+  | EndEvent
+  -- ^ Signal main thread that programm could be stopped
+  -- - all request are fulfiled and all resources are claned up
+  deriving (Show, Eq)
+
+-- | Configuration of how synchronization should be done,
+-- supplied by the user via CLI arguments
 data SyncConfig = SyncConfig
       { configVerbosity :: Verbosity
+      -- ^ How much information to send to stdout / stderr
       } deriving (Show)
 
+-- | Bootstrapped program configuration
 data Bootstrapped = Bootstrapped
   { bootstrappedConfig :: SyncConfig
+  -- ^ The configuration supplied by user (unmodified)
   , bootstrappedLoggers :: (TimedFastLogger, TimedFastLogger)
+  -- ^ stdout / stderr loggers initialized
   , bootstrappedInput :: Chan Event
+  -- ^ Input channel
   , bootstrappedOutput :: Chan ()
+  -- ^ Output channel (just to flag program termination to main thread)
   }
 
-data SyncError =
-    SysCallError Text
+-- | Representation of errors that could happen during program execution
+data SyncError
+  = SysCallError Text
+  -- ^ Error calling some system utility (only __osascript__ at this point)
   | NoItemsError FilePath
+  -- ^ When there are no items in org file found passed as argument
   | InvalidDestinationError Text
-  | DecodeError Text Text deriving (Show)
+  -- ^ When the destination of synchronization is invalid.
+  -- In case of Reminders OSX app this means the list name is not
+  -- valid or there is no default list name for some reason
+  | DecodeError Text Text
+  -- ^ Error decoding output from __osascript__. Unlikely to happen
+  -- but usefull to see during development
+  deriving (Show)
 
+instance ToLogStr SyncError where
+  toLogStr (SysCallError bs) = toLogStr bs
+  toLogStr (NoItemsError path) =
+    toLogStr $ "No org items found to import in " <> show path
+  toLogStr (InvalidDestinationError destination) =
+    toLogStr $ "There was an error getting reminders from "
+    <> T.unpack destination
+    <> ". Try specifying different name"
+  toLogStr (DecodeError raw err) = toLogStr $
+    "Error decoding output "
+    <> show raw
+    <> " got errror "
+    <> show err
+
+-- | Status keyword for headlines in org file.
+-- Has no support for custom status keywords yet
 data TodoStatus
   = Todo
   | Done
   | InProgress
   deriving (Show, Eq, Ord)
 
--- | Main representation of TODO item
+-- | Internal representation of org-like items. Usefull as an intermediate
+-- type of various types of reminders (at this point only org headlines
+-- or items of Reminders OSX application)
 data Reminder = Reminder
   { todoName   :: T.Text
   , todoId     :: T.Text
@@ -75,27 +132,42 @@ instance Eq Reminder where
 instance Ord Reminder where
   compare = compare `on` todoId
 
+-- | Synonym for the list of reminder items
 type Reminders = [Reminder]
 
+-- | Identifier of places (simply TODO list names) of storage of reminder
+-- items
 type BucketId = Text
 
+-- | Information of place the reminders could be stored in.
+-- For Reminders OSX application that is simply list name and id. But for
+-- org file that could be org file name
 data Bucket = Bucket { bucketId :: BucketId
                      , bucketName :: Text
                      } deriving (Show, Eq, Ord)
 
+-- | Alias for list of places reminders could be stored in
 type Buckets = [Bucket]
 
+-- | Convert a list of reminders to a mapping from it's ID to reminder item
 remindersToMapping :: Reminders -> MS.Map T.Text Reminder
 remindersToMapping rems = MS.fromList $ (,) <$> todoId <*> id <$> rems
 
+-- | Allows to convert back and forth between various reminder
+-- representations. Allows to abstract @Command@ interpreter from concrete
+-- implementation of reminder by converting TODO items on a fly
 class OrgLike a where
   from :: a -> Reminder
+  -- ^ Convert some representation to internal representation
   to :: Reminder -> a
+  -- ^ Convert internal representation to some other TODO representation
 
 instance OrgLike Reminder where
   from = id
   to = id
 
+-- | Main transformers stack. Allows to do IO, monadic computation,
+-- have common context (via Reader) and work with pure exceptions
 newtype ResultT m a = O2AMT
   { getResultT :: ExceptT SyncError (ReaderT Bootstrapped m) a
   } deriving
@@ -112,8 +184,13 @@ newtype ResultT m a = O2AMT
 runResultT :: Monad m => Bootstrapped -> ResultT m a -> m (Either SyncError a)
 runResultT config = usingReaderT config . runExceptT . getResultT
 
-type Result = ResultT IO
-type UnitResult = Result ()
-
+-- | Execute trasformer stack
 runResult :: Bootstrapped -> Result a -> IO (Either SyncError a)
 runResult = runResultT
+
+-- | Yield result requiring some side effects to be executed.
+-- ResultT is `newtype` alias to a set of transformers derrived
+-- using
+-- <https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/glasgow_exts.html#extension-GeneralizedNewtypeDeriving GeneralizedNewtypeDeriving>
+-- extension
+type Result = ResultT IO

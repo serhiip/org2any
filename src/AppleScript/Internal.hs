@@ -1,7 +1,15 @@
+{-|
+Module      : AppleScript.Internal
+Description : Scripts to connect with Reminders OSX app
+License     : GPL-3
+Maintainer  : Serhii <serhii@proximala.bz>
+Stability   : experimental
+
+This scripts are written in <https://developer.apple.com/library/archive/documentation/LanguagesUtilities/Conceptual/MacAutomationScriptingGuide/index.html AppleScript> JavaScript dialect and used to synchronize stuff with Reminders OSX application.
+-}
+
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module AppleScript.Internal
   ( createManyScript
@@ -15,19 +23,10 @@ module AppleScript.Internal
 where
 
 import qualified AppleScript.Types             as A
-import           Data.Aeson                     ( ToJSON(..)
-                                                , FromJSON(..)
-                                                , (.:)
-                                                , (.:?)
-                                                , encode
-                                                , withObject
+import           Data.Aeson                     ( encode
                                                 , eitherDecode
-                                                , genericToEncoding
-                                                , defaultOptions
-                                                , fieldLabelModifier
                                                 )
 import           Data.Bifunctor                 ( first )
-import           Data.Char                      ( toLower )
 import qualified Data.Map.Strict               as MS
 import           Data.Text                      ( splitOn
                                                 , strip
@@ -37,61 +36,10 @@ import           Types                          ( Reminders
                                                 , TodoStatus(..)
                                                 , BucketId
                                                 , Bucket(..)
-                                                , OrgLike(..)
                                                 )
 import           Universum
 
-convertBucket :: A.ReminderList -> Bucket
-convertBucket (A.ReminderList bid name) = Bucket bid name
-
-instance OrgLike A.Reminder where
-  from A.Reminder{..} = Reminder todoName todoId todoBody (Just status)
-    where status = if todoCompleted then Done else InProgress
-
-  to Reminder{..} = A.Reminder todoId
-                       todoBody
-                       (Just Done == todoStatus)
-                       todoName
-                       0
-                       Nothing
-                       Nothing
-                       Nothing
-                       Nothing
-                       Nothing
-
-instance FromJSON A.Reminder where
-  parseJSON = withObject "Todo" $ \v -> A.Reminder
-    <$> v .: "id"
-    <*> v .:? "body"
-    <*> v .: "completed"
-    <*> v .: "name"
-    <*> v .: "priority"
-    <*> v .:? "dueDate"
-    <*> v .:? "modificationDate"
-    <*> v .:? "creationDate"
-    <*> v .:? "completionDate"
-    <*> v .:? "remindMeDate"
-
-instance FromJSON A.ReminderList where
-  parseJSON = withObject "TodoList" $ \l -> A.ReminderList
-    <$> l .: "id"
-    <*> l .: "name"
-
-instance ToJSON A.Reminder where
-  toEncoding r = enc r { A.todoName = A.todoName r <> " |" <> A.todoId r}
-    where
-      enc =
-            genericToEncoding defaultOptions
-            { fieldLabelModifier =
-              let
-                firstToLower (f:rest) = toLower f : rest
-                firstToLower [] = []
-              in firstToLower . drop (length @String "todo")
-            }
-
-asJSObject :: [A.Reminder] -> LByteString
-asJSObject = encode . MS.fromList . fmap ((,) <$> A.todoId <*> id)
-
+-- | Make a few new reminders in some list
 createManyScript :: BucketId -> [A.Reminder] -> LByteString
 createManyScript _ rems = header
   <> mconcat (fmap (\n -> mconcat [st, encode n, en]) rems)
@@ -103,6 +51,7 @@ createManyScript _ rems = header
   header :: LByteString
   header = "app = Application(\"Reminders\"); \n"
 
+-- | List all reminders in a list
 listAllScript :: BucketId -> LByteString
 listAllScript bid =
   "app = Application('Reminders'); \n\
@@ -121,6 +70,7 @@ listAllScript bid =
     \}) \n\
   \JSON.stringify(res)"
 
+-- | Delete some reminders from list by ID stored in a title
 deleteManyScript :: BucketId -> [A.Reminder] -> LByteString
 deleteManyScript bid reminders =
   "app = Application('Reminders'); \n\
@@ -138,6 +88,8 @@ deleteManyScript bid reminders =
     \} \n\
   \}"
 
+-- | Update some items in a list by identifying them by id stored
+-- in a title
 updateManyScript :: BucketId -> [A.Reminder] -> LByteString
 updateManyScript bid reminders =
   "app = Application('Reminders'); \n\
@@ -161,6 +113,7 @@ updateManyScript bid reminders =
     \} \n\
   \}"
 
+-- | Get a list of available reminder lists
 listListsScript :: LByteString
 listListsScript
   = "app = Application('Reminders'); \n\
@@ -175,7 +128,7 @@ listListsScript
   \}); \n\
   \JSON.stringify(res);"
 
-
+-- | Helper function to decode the list of reminders.
 decodeRemindersList :: LByteString -> Either Text Reminders
 decodeRemindersList t = do
   decoded <- first fromString (eitherDecode t)
@@ -186,3 +139,12 @@ decodeRemindersList t = do
  where
   make (name : id' : _) = Reminder (strip name) id' (Just "a") (pure Todo) -- TODO
   make _                = error "should not happen"
+
+-- | Convert Reminders app representation to generic one
+convertBucket :: A.ReminderList -> Bucket
+convertBucket (A.ReminderList bid name) = Bucket bid name
+
+-- | Helper to make a JSON object
+asJSObject :: [A.Reminder] -> LByteString
+asJSObject = encode . MS.fromList . fmap ((,) <$> A.todoId <*> id)
+

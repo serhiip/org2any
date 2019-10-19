@@ -1,3 +1,13 @@
+{-|
+Module      : AppleScript
+Description : AppleScript interpreter of `Command.Command`s
+License     : GPL-3
+Maintainer  : Serhii <serhii@proximala.bz>
+Stability   : experimental
+
+Executes the sequence of `Command.Command`s to syncronize a list of reminders to Reminders application on Mac OS.
+-}
+
 {-# LANGUAGE OverloadedStrings #-}
 
 module AppleScript
@@ -32,6 +42,8 @@ execute script = do
   unless (exitCode == ExitSuccess) $ throwError (SysCallError $ decodeUtf8 err)
   return out
 
+-- | Execute commands by producing calls (side effects) to Reminders OSX
+-- application via <https://www.unix.com/man-page/osx/1/osascript/ osascript> system utility
 evalAppleScript :: Command x -> Result x
 evalAppleScript (Pure r                ) = return r
 evalAppleScript (Free (GetAll bucket f)) = do

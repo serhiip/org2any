@@ -1,3 +1,13 @@
+{-|
+Module      : Executor
+Description : Handler of events of interaction
+License     : GPL-3
+Maintainer  : Serhii <serhii@proximala.bz>
+Stability   : experimental
+
+Handles the event coming to the program: either user events (file update, program stop) or system events (termination or exception)
+-}
+
 {-# LANGUAGE OverloadedStrings #-}
 
 module Executor
@@ -22,7 +32,11 @@ import           Parser                         ( reminders
 import           Types
 import           Universum
 
-execute :: UnitResult
+-- | Event handler listens for input channel supplied in
+-- `Types.Bootstrapped` and executes the handlers based on the type of
+-- event in parallel to the main thread of execution. Handlers are executed -- synchronously - new incomming request will be queued up in an input
+-- channel if this thread is busy executing previous request
+execute :: Result ()
 execute = do
   input  <- reader bootstrappedInput
   output <- reader bootstrappedOutput

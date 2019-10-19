@@ -1,8 +1,19 @@
+{-|
+Module      : Parser
+Description : Org file parsing utilities
+License     : GPL-3
+Maintainer  : Serhii <serhii@proximala.bz>
+Stability   : experimental
+
+Org file parsing utilities via <https://github.com/ixmatus/orgmode-parse orgmode-parse>.
+-}
+
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Parser
   ( titles
-  , doc
   , runParser
   , reminders
   )
@@ -11,7 +22,7 @@ where
 import           Universum
 
 import qualified Data.Attoparsec.Text          as A
-import           Data.Bifunctor                 ( bimap )
+import           Data.Bifunctor                 ( first )
 import           Data.HashMap.Strict.InsOrd     ( lookupDefault )
 import qualified Data.OrgMode.Parse            as O
 import qualified Data.OrgMode.Types            as O
@@ -23,34 +34,29 @@ import           Types                          ( Reminder(..)
                                                 )
 import           Data.Monoid                    ( mconcat )
 
-newtype Org = Org
-  { doc :: O.Document
-  } deriving (Show)
+-- | Execute a parser against given string
+runParser :: T.Text -> Either SyncError O.Document
+runParser = first (SysCallError . fromString) . A.parseOnly O.parseDocument
 
-runParser :: T.Text -> Either SyncError Org
-runParser = bimap verboseError Org . A.parseOnly parser
- where
-  parser       = O.parseDocument
-  verboseError = SysCallError . fromString
-
-newtype Title = Title {text :: T.Text} deriving Show
-
+-- | Convert org document headlines to internal representation
 titles :: (Applicative m, Monoid (m Reminder)) => O.Headline -> m Reminder
-titles item = pure (Reminder (O.title item) (rid item) (lookupBody item) status)
-  <> mconcat (titles <$> O.subHeadlines item)
+titles h@O.Headline {..} = pure (Reminder title (rid section) (body h) status)
+  <> mconcat (titles <$> O.subHeadlines h)
  where
-  rid      = lookupId . O.unProperties . O.sectionProperties . O.section
+  rid      = lookupId . O.unProperties . O.sectionProperties
   lookupId = lookupDefault (T.pack "noid") (T.pack "ID")
-  lookupBody headline = case (O.sectionContents . O.section) headline of
-    []                          -> Just T.empty
-    [O.Paragraph [O.Plain txt]] -> Just txt
-    _                           -> Nothing
+  headl    = O.sectionContents . O.section
 
-  status = O.stateKeyword item >>= mkStatus . T.unpack . O.unStateKeyword
-  mkStatus st = case st of
-    "DONE" -> Just Done
-    "TODO" -> Just Todo
-    _      -> Nothing
+  body (headl -> []) = Just T.empty
+  body (headl -> [O.Paragraph [O.Plain txt]]) = Just txt
+  body _ = Nothing
 
-reminders :: Org -> Reminders
-reminders = concatMap titles . O.documentHeadlines . doc
+  status = O.stateKeyword h >>= mkStatus . T.unpack . O.unStateKeyword
+
+  mkStatus "DONE" = Just Done
+  mkStatus "TODO" = Just Todo
+  mkStatus _      = Nothing
+
+-- | Extract a list of reminders from parsed org document
+reminders :: O.Document -> Reminders
+reminders = concatMap titles . O.documentHeadlines

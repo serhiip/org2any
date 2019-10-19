@@ -1,6 +1,16 @@
+{-|
+Module      : Logging
+Description : Logging utilities
+License     : GPL-3
+Maintainer  : Serhii <serhii@proximala.bz>
+Stability   : experimental
+
+Log meassages of various log levels either via main transfromer stack or via just IO.
+ Uses <https://github.com/kazu-yamamoto/logger kazu-yamamoto/logger>
+-}
+
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Logging
   ( initLogging
@@ -13,7 +23,6 @@ module Logging
   )
 where
 
-import           Data.Text                      ( unpack )
 import qualified Data.Text.Lazy                as TL
 import           System.Log.FastLogger          ( ToLogStr
                                                 , toLogStr
@@ -32,22 +41,14 @@ instance ToLogStr Severity where
   toLogStr Info = toLogStr $ TL.pack "[INFO] "
   toLogStr Error = toLogStr $ TL.pack "[ERROR]"
 
-instance ToLogStr SyncError where
-  toLogStr (SysCallError bs) = toLogStr bs
-  toLogStr (NoItemsError path) =
-    toLogStr $ "No org items found to import in " <> show path
-  toLogStr (InvalidDestinationError destination) =
-    toLogStr $ "There was an error getting reminders from "
-    <> unpack destination
-    <> ". Try specifying different name"
-  toLogStr (DecodeError raw err) = toLogStr $
-    "Error decoding output "
-    <> show raw
-    <> " got errror "
-    <> show err
+-- | Logging severity and destination (stderr / stdout)
+data Severity
+  = Debug
+  | Info
+  | Error
+  deriving (Show, Eq, Ord)
 
-data Severity = Debug | Info | Error deriving (Show, Eq, Ord)
-
+-- | Helper function to initialize stderr and stdout loggers
 initLogging :: IO (TimedFastLogger, TimedFastLogger, IO ())
 initLogging = do
   timeCache                <- newTimeCache simpleTimeFormat'
@@ -55,6 +56,9 @@ initLogging = do
   (stderrLogger, cleanUp') <- newTimedFastLogger timeCache (LogStderr 1)
   return (stdoutLogger, stderrLogger, cleanUp >> cleanUp')
 
+-- | Generic function to log messages. Logs messages of `Error` severity
+-- to stderr. Will not emit any messages to stdout when `Types.Verbosity` is
+-- `Types.Quiet`
 logMessage'
   :: ToLogStr a
   => Severity
@@ -80,12 +84,15 @@ logMessage' severity (stdo, stde) verbosity message = do
     (Quiet , _    ) -> False
     _               -> True
 
+-- | Print informatic message to STDOUT. Will not emit anything if verbosity is `Types.Quiet`
 logInfo' :: ToLogStr a => (TimedFastLogger, TimedFastLogger) -> Verbosity -> a -> IO ()
 logInfo' = logMessage' Info
 
+-- | Print error to STDERR. Ignores verbosity parameter
 logError' :: ToLogStr a => (TimedFastLogger, TimedFastLogger) -> Verbosity -> a -> IO ()
 logError' = logMessage' Error
 
+-- | Print debug message to STDOUT when verbosity is `Types.Verbose`
 logDebug' :: ToLogStr a => (TimedFastLogger, TimedFastLogger) -> Verbosity -> a -> IO ()
 logDebug' = logMessage' Debug
 
@@ -98,11 +105,14 @@ logMessageM severity message = do
                        (configVerbosity . bootstrappedConfig $ config)
                        message
 
+-- | Same as `logDebug'` but more generic
 logDebug :: (MonadIO m, ToLogStr a, MonadReader r m, r ~ Bootstrapped) => a -> m ()
 logDebug = logMessageM Debug
 
+-- | Same as `logInfo'` but more generic
 logInfo :: (MonadIO m, ToLogStr a, MonadReader r m, r ~ Bootstrapped) => a -> m ()
 logInfo = logMessageM Info
 
+-- | Same as `logError'` but more generic
 logError :: (MonadIO m, ToLogStr a, MonadReader r m, r ~ Bootstrapped) => a -> m ()
 logError = logMessageM Error
