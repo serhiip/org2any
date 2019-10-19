@@ -1,5 +1,5 @@
 {-|
-Module      : Logging
+Module      : Data.OrgMode.Sync.Logging
 Description : Logging utilities
 License     : GPL-3
 Maintainer  : Serhii <serhii@proximala.bz>
@@ -12,7 +12,7 @@ Log meassages of various log levels either via main transfromer stack or via jus
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE InstanceSigs #-}
 
-module Logging
+module Data.OrgMode.Sync.Logging
   ( initLogging
   , logDebug
   , logInfo
@@ -33,7 +33,7 @@ import           System.Log.FastLogger          ( ToLogStr
 import           System.Log.FastLogger.Date     ( newTimeCache
                                                 , simpleTimeFormat'
                                                 )
-import           Types
+import           Data.OrgMode.Sync.Types
 import           Universum
 
 instance ToLogStr Severity where

@@ -1,5 +1,5 @@
 {-|
-Module      : AppleScript.Types
+Module      : Data.OrgMode.Sync.AppleScript.Types
 Description : Types related to OSX Reminders interaction
 License     : GPL-3
 Maintainer  : Serhii <serhii@proximala.bz>
@@ -11,7 +11,7 @@ Stability   : experimental
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module AppleScript.Types
+module Data.OrgMode.Sync.AppleScript.Types
   ( Reminder(..)
   , ReminderList(..)
   )
@@ -30,7 +30,7 @@ import           Data.Aeson                     ( ToJSON(..)
                                                 , fieldLabelModifier
                                                 )
 import           Data.Char                      ( toLower )
-import qualified Types                         as O
+import qualified Data.OrgMode.Sync.Types       as O
 import           Universum
 
 -- | A Reminders OSX app representation of TODO list

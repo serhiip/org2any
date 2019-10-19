@@ -2,9 +2,9 @@
 
 module AppleScriptSpec where
 
-import           AppleScript.Internal
+import           Data.OrgMode.Sync.AppleScript.Internal
 import           Test.Hspec
-import           Types
+import           Data.OrgMode.Sync.Types
 import           Universum
 
 remindersSpec :: Spec

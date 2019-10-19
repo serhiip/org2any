@@ -15,12 +15,12 @@ import           Control.Concurrent.Chan        ( newChan
                                                 , readChan
                                                 )
 import           Control.Monad                  ( forever )
-import           Executor                       ( execute )
-import           Logging
+import           Data.OrgMode.Sync.Executor     ( execute )
+import           Data.OrgMode.Sync.Logging
 import           System.Directory
 import           System.FSNotify         hiding ( Action )
 import           System.FilePath
-import           Types
+import           Data.OrgMode.Sync.Types
 import           Universum
 import           System.Posix.Signals           ( sigTERM
                                                 , sigINT

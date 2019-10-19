@@ -1,5 +1,5 @@
 {-|
-Module      : Command
+Module      : Data.OrgMode.Sync.Command
 Description : Synchronization scripts as `Data.Control.Free` monads
 License     : GPL-3
 Maintainer  : Serhii <serhii@proximala.bz>
@@ -11,7 +11,7 @@ Utilities to create manipulation scripts without knowledge of the destination ag
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Command
+module Data.OrgMode.Sync.Command
   ( Reminders
   , CommandF(..)
   , Command
@@ -25,7 +25,7 @@ module Command
 where
 
 import           Control.Monad.Free
-import           Types
+import           Data.OrgMode.Sync.Types
 import           Universum               hiding ( elem
                                                 , notElem
                                                 )

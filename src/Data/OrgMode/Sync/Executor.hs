@@ -1,5 +1,5 @@
 {-|
-Module      : Executor
+Module      : Data.OrgMode.Sync.Executor
 Description : Handler of events of interaction
 License     : GPL-3
 Maintainer  : Serhii <serhii@proximala.bz>
@@ -10,13 +10,13 @@ Handles the event coming to the program: either user events (file update, progra
 
 {-# LANGUAGE OverloadedStrings #-}
 
-module Executor
+module Data.OrgMode.Sync.Executor
   ( execute
   )
 where
 
-import           AppleScript                    ( evalAppleScript )
-import           Command
+import           Data.OrgMode.Sync.AppleScript  ( evalAppleScript )
+import           Data.OrgMode.Sync.Command
 import           Control.Concurrent.Chan        ( readChan
                                                 , writeChan
                                                 )
@@ -25,11 +25,11 @@ import           Control.Monad.Except           ( throwError
                                                 , liftEither
                                                 )
 import           Data.Text                      ( pack )
-import           Logging
-import           Parser                         ( reminders
+import           Data.OrgMode.Sync.Logging
+import           Data.OrgMode.Sync.Parser       ( reminders
                                                 , runParser
                                                 )
-import           Types
+import           Data.OrgMode.Sync.Types
 import           Universum
 
 -- | Event handler listens for input channel supplied in
@@ -45,9 +45,7 @@ execute = do
   case event of
     EndEvent                      -> notifyEnd
     UserTerminatedEvent lastWords -> logDebug lastWords *> notifyEnd
-    SystemTerminatedEvent         -> logError
-                                     (pack "org2any was terminated")
-                                     *> notifyEnd
+    SystemTerminatedEvent         -> logError (pack "org2any was terminated") *> notifyEnd
     SyncEvent filePath dst        -> do
       logInfo $ "Processing " <> filePath
       readResult <- (try . readFile) filePath :: Result (Either IOException Text)

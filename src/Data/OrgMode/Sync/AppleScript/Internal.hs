@@ -1,5 +1,5 @@
 {-|
-Module      : AppleScript.Internal
+Module      : Data.OrgMode.Sync.AppleScript.Internal
 Description : Scripts to connect with Reminders OSX app
 License     : GPL-3
 Maintainer  : Serhii <serhii@proximala.bz>
@@ -11,7 +11,7 @@ This scripts are written in <https://developer.apple.com/library/archive/documen
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
-module AppleScript.Internal
+module Data.OrgMode.Sync.AppleScript.Internal
   ( createManyScript
   , listAllScript
   , deleteManyScript
@@ -22,7 +22,8 @@ module AppleScript.Internal
   )
 where
 
-import qualified AppleScript.Types             as A
+import qualified Data.OrgMode.Sync.AppleScript.Types
+                                               as A
 import           Data.Aeson                     ( encode
                                                 , eitherDecode
                                                 )
@@ -31,7 +32,7 @@ import qualified Data.Map.Strict               as MS
 import           Data.Text                      ( splitOn
                                                 , strip
                                                 )
-import           Types                          ( Reminders
+import           Data.OrgMode.Sync.Types        ( Reminders
                                                 , Reminder(..)
                                                 , TodoStatus(..)
                                                 , BucketId

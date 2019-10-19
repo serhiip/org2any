@@ -1,5 +1,5 @@
 {-|
-Module      : Parser
+Module      : Data.OrgMode.Sync.Parser
 Description : Org file parsing utilities
 License     : GPL-3
 Maintainer  : Serhii <serhii@proximala.bz>
@@ -12,7 +12,7 @@ Org file parsing utilities via <https://github.com/ixmatus/orgmode-parse orgmode
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module Parser
+module Data.OrgMode.Sync.Parser
   ( titles
   , runParser
   , reminders
@@ -27,7 +27,7 @@ import           Data.HashMap.Strict.InsOrd     ( lookupDefault )
 import qualified Data.OrgMode.Parse            as O
 import qualified Data.OrgMode.Types            as O
 import qualified Data.Text                     as T
-import           Types                          ( Reminder(..)
+import           Data.OrgMode.Sync.Types        ( Reminder(..)
                                                 , Reminders
                                                 , TodoStatus(..)
                                                 , SyncError(..)

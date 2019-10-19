@@ -8,7 +8,7 @@ where
 
 import           Universum
 import           Options.Applicative
-import           Types
+import           Data.OrgMode.Sync.Types
 
 data Action
   = Sync { filePath :: FilePath

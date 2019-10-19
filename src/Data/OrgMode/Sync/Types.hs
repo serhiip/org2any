@@ -1,5 +1,5 @@
 {-|
-Module      : Types
+Module      : Data.OrgMode.Sync.Types
 Description : Definitions representing common datatypes
 License     : GPL-3
 Maintainer  : Serhii <serhii@proximala.bz>
@@ -10,7 +10,7 @@ Reminder item internal represenatation, main transformer stack and configuration
 
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Types
+module Data.OrgMode.Sync.Types
   ( Reminder(..)
   , Reminders
   , BucketId

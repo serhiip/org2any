@@ -1,5 +1,5 @@
 {-|
-Module      : AppleScript
+Module      : Data.OrgMode.Sync.AppleScript
 Description : AppleScript interpreter of `Command.Command`s
 License     : GPL-3
 Maintainer  : Serhii <serhii@proximala.bz>
@@ -10,13 +10,13 @@ Executes the sequence of `Command.Command`s to syncronize a list of reminders to
 
 {-# LANGUAGE OverloadedStrings #-}
 
-module AppleScript
+module Data.OrgMode.Sync.AppleScript
   ( evalAppleScript
   )
 where
 
-import           AppleScript.Internal
-import           Command                        ( Command
+import           Data.OrgMode.Sync.AppleScript.Internal
+import           Data.OrgMode.Sync.Command      ( Command
                                                 , CommandF(..)
                                                 )
 import           Control.Monad.Except           ( throwError
@@ -29,9 +29,9 @@ import           System.Exit                    ( ExitCode(..) )
 import           System.Process.Typed           ( proc
                                                 , readProcess
                                                 )
-import           Types
+import           Data.OrgMode.Sync.Types
 import           Universum
-import           Logging
+import           Data.OrgMode.Sync.Logging
 
 execute :: LByteString -> Result LByteString
 execute script = do

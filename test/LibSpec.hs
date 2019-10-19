@@ -6,14 +6,14 @@ module LibSpec
   )
 where
 
-import           Command
+import           Data.OrgMode.Sync.Command
 import           Control.Monad.Free
 import           Data.Text                      ( Text
                                                 , pack
                                                 )
 import           Test.Hspec
 import           Test.QuickCheck
-import           Types
+import           Data.OrgMode.Sync.Types
 import           Universum               hiding ( foldl
                                                 , state
                                                 , first
