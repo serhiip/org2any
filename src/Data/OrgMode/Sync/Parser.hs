@@ -5,7 +5,8 @@ License     : GPL-3
 Maintainer  : Serhii <serhii@proximala.bz>
 Stability   : experimental
 
-Org file parsing utilities via <https://github.com/ixmatus/orgmode-parse orgmode-parse>.
+Org file parsing utilities via
+ <https://github.com/ixmatus/orgmode-parse orgmode-parse>.
 -}
 
 {-# LANGUAGE OverloadedStrings #-}

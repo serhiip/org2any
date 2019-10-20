@@ -5,7 +5,8 @@ License     : GPL-3
 Maintainer  : Serhii <serhii@proximala.bz>
 Stability   : experimental
 
-Reminder item internal represenatation, main transformer stack and configuration datatypes.
+Reminder item internal represenatation, main transformer stack and
+ configuration datatypes.
 -}
 
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -57,8 +58,8 @@ data Event
   | SyncEvent FilePath (Maybe Text)
   -- ^ User request to synchronize a file
   | EndEvent
-  -- ^ Signal main thread that programm could be stopped
-  -- - all request are fulfiled and all resources are claned up
+  -- ^ Signal main thread that programm could be stopped - all request
+  -- are fulfiled and all resources are claned up
   deriving (Show, Eq)
 
 -- | Configuration of how synchronization should be done,
@@ -77,19 +78,22 @@ data Bootstrapped = Bootstrapped
   , bootstrappedInput :: Chan Event
   -- ^ Input channel
   , bootstrappedOutput :: Chan ()
-  -- ^ Output channel (just to flag program termination to main thread)
+  -- ^ Output channel (just to flag program termination to main
+  -- thread)
   }
 
--- | Representation of errors that could happen during program execution
+-- | Representation of errors that could happen during program
+-- execution
 data SyncError
   = SysCallError Text
-  -- ^ Error calling some system utility (only __osascript__ at this point)
+  -- ^ Error calling some system utility (only __osascript__ at this
+  -- point)
   | NoItemsError FilePath
   -- ^ When there are no items in org file found passed as argument
   | InvalidDestinationError Text
-  -- ^ When the destination of synchronization is invalid.
-  -- In case of Reminders OSX app this means the list name is not
-  -- valid or there is no default list name for some reason
+  -- ^ When the destination of synchronization is invalid. In case of
+  -- Reminders OS X app this means the list name is not valid or there
+  -- is no default list name for some reason
   | DecodeError Text Text
   -- ^ Error decoding output from __osascript__. Unlikely to happen
   -- but usefull to see during development
@@ -116,17 +120,17 @@ instance ToLogStr SyncError where
     <> " got error "
     <> original
 
--- | Status keyword for headlines in org file.
--- Has no support for custom status keywords yet
+-- | Status keyword for headlines in org file. Has no support for
+-- custom status keywords yet
 data TodoStatus
   = Todo
   | Done
   | InProgress
   deriving (Show, Eq, Ord)
 
--- | Internal representation of org-like items. Usefull as an intermediate
--- type of various types of reminders (at this point only org headlines
--- or items of Reminders OSX application)
+-- | Internal representation of org-like items. Usefull as an
+-- intermediate type of various types of reminders (at this point only
+-- org headlines or items of Reminders OS X application)
 data Reminder = Reminder
   { todoName   :: T.Text
   , todoId     :: T.Text
@@ -143,12 +147,12 @@ instance Ord Reminder where
 -- | Synonym for the list of reminder items
 type Reminders = [Reminder]
 
--- | Identifier of places (simply TODO list names) of storage of reminder
--- items
+-- | Identifier of places (simply TODO list names) of storage of
+-- reminder items
 type BucketId = Text
 
--- | Information of place the reminders could be stored in.
--- For Reminders OSX application that is simply list name and id. But for
+-- | Information of place the reminders could be stored in. For
+-- Reminders OS X application that is simply list name and ID. But for
 -- org file that could be org file name
 data Bucket = Bucket { bucketId :: BucketId
                      , bucketName :: Text
@@ -162,13 +166,15 @@ remindersToMapping :: Reminders -> MS.Map T.Text Reminder
 remindersToMapping rems = MS.fromList $ (,) <$> todoId <*> id <$> rems
 
 -- | Allows to convert back and forth between various reminder
--- representations. Allows to abstract @Command@ interpreter from concrete
--- implementation of reminder by converting TODO items on a fly
+-- representations. Allows to abstract @Command@ interpreter from
+-- concrete implementation of reminder by converting TODO items on the
+-- fly
 class OrgLike a where
   from :: a -> Reminder
   -- ^ Convert some representation to internal representation
   to :: Reminder -> a
-  -- ^ Convert internal representation to some other TODO representation
+  -- ^ Convert internal representation to some other TODO
+  -- representation
 
 instance OrgLike Reminder where
   from = id
@@ -197,9 +203,8 @@ runResultT config = usingReaderT config . runExceptT . getResultT
 runResult :: Bootstrapped -> Result a -> IO (Either SyncError a)
 runResult = runResultT
 
--- | Yield result requiring some side effects to be executed.
--- ResultT is `newtype` alias to a set of transformers derrived
--- using
+-- | Yield result requiring some side effects to be executed.  ResultT
+-- is `newtype` alias to a set of transformers derrived using
 -- <https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/glasgow_exts.html#extension-GeneralizedNewtypeDeriving GeneralizedNewtypeDeriving>
 -- extension
 type Result = ResultT IO

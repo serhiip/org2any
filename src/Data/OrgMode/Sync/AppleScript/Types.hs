@@ -1,6 +1,6 @@
 {-|
 Module      : Data.OrgMode.Sync.AppleScript.Types
-Description : Types related to OSX Reminders interaction
+Description : Types related to OS X Reminders interaction
 License     : GPL-3
 Maintainer  : Serhii <serhii@proximala.bz>
 Stability   : experimental
@@ -33,13 +33,13 @@ import           Data.Char                      ( toLower )
 import qualified Data.OrgMode.Sync.Types       as O
 import           Universum
 
--- | A Reminders OSX app representation of TODO list
+-- | A Reminders OS X app representation of TODO list
 data ReminderList = ReminderList {
     listId :: Text
   , listName :: Text
   } deriving (Show, Eq, Ord, Generic)
 
--- | Item representation of Reminders OSX application.
+-- | Item representation of Reminders OS X application.
 data Reminder = Reminder {
     todoId :: Text
     -- ^ Unique identifier

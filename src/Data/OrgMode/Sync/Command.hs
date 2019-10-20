@@ -5,7 +5,8 @@ License     : GPL-3
 Maintainer  : Serhii <serhii@proximala.bz>
 Stability   : experimental
 
-Utilities to create manipulation scripts without knowledge of the destination against which constructed script will be executed.
+Utilities to create manipulation scripts without knowledge of the
+ destination against which constructed script will be executed.
 -}
 
 {-# LANGUAGE OverloadedStrings #-}
@@ -101,8 +102,9 @@ listBuckets = liftF $ ListBuckets id
 --  1. List all of the buckets and check that destination bucket
 --     actually exists
 --
---  2. List all of the existing reminders within that bucket and derive
---     lists of items that should be deleted, updated and created
+--  2. List all of the existing reminders within that bucket and
+--     derive lists of items that should be deleted, updated and
+--     created
 --
 --  3. Delete reminders
 --
@@ -124,10 +126,10 @@ sync name toSync = do
       createMany bucket creations
     Nothing -> return . Left . InvalidDestinationError $ name
 
--- | An interpreter for `Command` that just prints the steps to be performed
--- to stdout (a.k.a. dry run). Has a caveat in regards the fact that the
--- actually existing reminders are never listed - so only steps 1, 2 and 5
--- are executed in `sync`
+-- | An interpreter for `Command` that just prints the steps to be
+-- performed to stdout (a.k.a. dry run). Has a caveat in regards the
+-- fact that the actually existing reminders are never listed - so
+-- only steps 1, 2 and 5 are executed in `sync`
 runDry :: Command x -> IO x
 runDry (Pure r) = return r
 runDry (Free (GetAll bid f)) =

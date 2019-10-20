@@ -5,8 +5,9 @@ License     : GPL-3
 Maintainer  : Serhii <serhii@proximala.bz>
 Stability   : experimental
 
-Log meassages of various log levels either via main transfromer stack or via just IO.
- Uses <https://github.com/kazu-yamamoto/logger kazu-yamamoto/logger>
+Log meassages of various log levels either via main transfromer stack
+ or via just IO. Uses
+ <https://github.com/kazu-yamamoto/logger kazu-yamamoto/logger>
 -}
 
 {-# LANGUAGE TypeFamilies #-}
@@ -56,9 +57,9 @@ initLogging = do
   (stderrLogger, cleanUp') <- newTimedFastLogger timeCache (LogStderr 1)
   return (stdoutLogger, stderrLogger, cleanUp >> cleanUp')
 
--- | Generic function to log messages. Logs messages of `Error` severity
--- to stderr. Will not emit any messages to stdout when `Types.Verbosity` is
--- `Types.Quiet`
+-- | Generic function to log messages. Logs messages of `Error`
+-- severity to stderr. Will not emit any messages to stdout when
+-- `Types.Verbosity` is `Types.Quiet`
 logMessage'
   :: ToLogStr a
   => Severity
