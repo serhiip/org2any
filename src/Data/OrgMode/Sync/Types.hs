@@ -19,7 +19,6 @@ module Data.OrgMode.Sync.Types
   , Buckets
   , TodoStatus(..)
   , Event(..)
-  , remindersToMapping
   , Result
   , runResult
   , SyncConfig(..)
@@ -34,7 +33,6 @@ where
 import           Control.Concurrent.Chan        ( Chan )
 import           Control.Monad.Except           ( MonadError(..) )
 import           Data.Function                  ( on )
-import qualified Data.Map.Strict               as MS
 import qualified Data.Text                     as T
 import           System.FilePath                ( FilePath )
 import           System.Log.FastLogger          ( TimedFastLogger
@@ -160,10 +158,6 @@ data Bucket = Bucket { bucketId :: BucketId
 
 -- | Alias for list of places reminders could be stored in
 type Buckets = [Bucket]
-
--- | Convert a list of reminders to a mapping from it's ID to reminder item
-remindersToMapping :: Reminders -> MS.Map T.Text Reminder
-remindersToMapping rems = MS.fromList $ (,) <$> todoId <*> id <$> rems
 
 -- | Allows to convert back and forth between various reminder
 -- representations. Allows to abstract @Command@ interpreter from
