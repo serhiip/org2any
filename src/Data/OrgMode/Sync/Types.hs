@@ -9,6 +9,7 @@ Reminder item internal represenatation, main transformer stack and configuration
 -}
 
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Data.OrgMode.Sync.Types
   ( Reminder(..)
@@ -92,21 +93,28 @@ data SyncError
   | DecodeError Text Text
   -- ^ Error decoding output from __osascript__. Unlikely to happen
   -- but usefull to see during development
+  | FileReadError FilePath Text
+  -- ^ Error reading input file
   deriving (Show)
 
 instance ToLogStr SyncError where
   toLogStr (SysCallError bs) = toLogStr bs
   toLogStr (NoItemsError path) =
-    toLogStr $ "No org items found to import in " <> show path
+    toLogStr $ "No org items found to import in " <> toText path
   toLogStr (InvalidDestinationError destination) =
     toLogStr $ "There was an error getting reminders from "
     <> T.unpack destination
     <> ". Try specifying different name"
   toLogStr (DecodeError raw err) = toLogStr $
     "Error decoding output "
-    <> show raw
-    <> " got errror "
-    <> show err
+    <> toText raw
+    <> " got error "
+    <> toText err
+  toLogStr (FileReadError path original) = toLogStr $
+    "There was an error reading "
+    <> toText path
+    <> " got error "
+    <> original
 
 -- | Status keyword for headlines in org file.
 -- Has no support for custom status keywords yet
@@ -179,6 +187,7 @@ newtype ResultT m a = O2AMT
   , MonadError SyncError
   , MonadThrow
   , MonadCatch
+  , MonadMask
   )
 
 runResultT :: Monad m => Bootstrapped -> ResultT m a -> m (Either SyncError a)
