@@ -37,7 +37,7 @@ import           Data.List                      ( partition
                                                 )
 
 -- | An action that could be performed. All of the action work against
--- particular `Types.Bucket`
+-- particular `Data.OrgMode.Sync.Types.Bucket`
 data CommandF x
   = GetAll Bucket (Reminders -> x)
   -- ^ List all reminders
@@ -126,10 +126,10 @@ sync name toSync = do
       createMany bucket creations
     Nothing -> return . Left . InvalidDestinationError $ name
 
--- | An interpreter for `Command` that just prints the steps to be
--- performed to stdout (a.k.a. dry run). Has a caveat in regards the
--- fact that the actually existing reminders are never listed - so
--- only steps 1, 2 and 5 are executed in `sync`
+-- | An interpreter for `Data.OrgMode.Sync.Command` that just prints
+-- the steps to be performed to stdout (a.k.a. dry run). Has a caveat
+-- in regards the fact that the actually existing reminders are never
+-- listed - so only steps 1, 2 and 5 are executed in `sync`
 runDry :: Command x -> IO x
 runDry (Pure r) = return r
 runDry (Free (GetAll bid f)) =

@@ -35,11 +35,11 @@ import           Data.OrgMode.Sync.Types
 import           Universum
 
 -- | Event handler listens for input channel supplied in
--- `Types.Bootstrapped` and executes the handlers based on the type of
--- event in parallel to the main thread of execution. Handlers are
--- executed -- synchronously - new incomming request will be queued up
--- in an input channel if this thread is busy executing previous
--- request
+-- `Data.OrgMode.Sync.Types.Bootstrapped` and executes the handlers
+-- based on the type of event in parallel to the main thread of
+-- execution. Handlers are executed -- synchronously - new incomming
+-- request will be queued up in an input channel if this thread is
+-- busy executing previous request
 execute :: Result ()
 execute = do
   input  <- reader bootstrappedInput

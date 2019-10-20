@@ -5,8 +5,8 @@ License     : GPL-3
 Maintainer  : Serhii <serhii@proximala.bz>
 Stability   : experimental
 
-Executes the sequence of `Command.Command`s to syncronize a list of
- reminders to Reminders application on Mac OS.
+Executes the sequence of `Data.OrgMode.Sync.Command.Command`s to
+ syncronize a list of reminders to Reminders application on Mac OS.
 -}
 
 {-# LANGUAGE OverloadedStrings #-}

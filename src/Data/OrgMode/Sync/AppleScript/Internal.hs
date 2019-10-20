@@ -5,7 +5,10 @@ License     : GPL-3
 Maintainer  : Serhii <serhii@proximala.bz>
 Stability   : experimental
 
-This scripts are written in <https://developer.apple.com/library/archive/documentation/LanguagesUtilities/Conceptual/MacAutomationScriptingGuide/index.html AppleScript> JavaScript dialect and used to synchronize stuff with Reminders OS X application.
+This scripts are written in
+ <https://developer.apple.com/library/archive/documentation/LanguagesUtilities/Conceptual/MacAutomationScriptingGuide/index.html AppleScript>
+ JavaScript dialect and used to synchronize stuff with
+ Reminders OS X application.
 -}
 
 {-# LANGUAGE OverloadedStrings #-}

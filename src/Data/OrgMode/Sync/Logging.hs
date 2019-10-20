@@ -42,7 +42,7 @@ instance ToLogStr Severity where
   toLogStr Info = toLogStr $ TL.pack "[INFO] "
   toLogStr Error = toLogStr $ TL.pack "[ERROR]"
 
--- | Logging severity and destination (stderr / stdout)
+-- | Logging severity and destination (STDOUT / STDERR)
 data Severity
   = Debug
   | Info
@@ -57,9 +57,10 @@ initLogging = do
   (stderrLogger, cleanUp') <- newTimedFastLogger timeCache (LogStderr 1)
   return (stdoutLogger, stderrLogger, cleanUp >> cleanUp')
 
--- | Generic function to log messages. Logs messages of `Error`
+-- | Generic function to log messages. Logs messages of @Error@
 -- severity to stderr. Will not emit any messages to stdout when
--- `Types.Verbosity` is `Types.Quiet`
+-- `Data.OrgMode.Sync.Types.Verbosity` is
+-- `Data.OrgMode.Sync.Types.Quiet`
 logMessage'
   :: ToLogStr a
   => Severity
@@ -85,7 +86,8 @@ logMessage' severity (stdo, stde) verbosity message = do
     (Quiet , _    ) -> False
     _               -> True
 
--- | Print informatic message to STDOUT. Will not emit anything if verbosity is `Types.Quiet`
+-- | Print informatic message to STDOUT. Will not emit anything if
+-- verbosity is `Data.OrgMode.Sync.Types.Quiet`
 logInfo' :: ToLogStr a => (TimedFastLogger, TimedFastLogger) -> Verbosity -> a -> IO ()
 logInfo' = logMessage' Info
 
@@ -93,7 +95,8 @@ logInfo' = logMessage' Info
 logError' :: ToLogStr a => (TimedFastLogger, TimedFastLogger) -> Verbosity -> a -> IO ()
 logError' = logMessage' Error
 
--- | Print debug message to STDOUT when verbosity is `Types.Verbose`
+-- | Print debug message to STDOUT when verbosity is
+-- `Data.OrgMode.Sync.Types.Verbose`
 logDebug' :: ToLogStr a => (TimedFastLogger, TimedFastLogger) -> Verbosity -> a -> IO ()
 logDebug' = logMessage' Debug
 
