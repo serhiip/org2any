@@ -29,6 +29,9 @@ instance Arbitrary TodoStatus where
 instance Arbitrary Reminder where
   arbitrary = Reminder <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
+defaultBucket :: Bucket
+defaultBucket = Bucket "1" "The List"
+
 eval :: Reminders -> Command x -> (Reminders, x)
 eval rems (Pure r                  ) = (rems, r)
 eval rems (Free (GetAll _ f       )) = eval rems . f $ rems
@@ -41,9 +44,6 @@ eval rems (Free (ListBuckets f)) = eval rems . f $ [defaultBucket]
 
 run :: (Reminders, Command b) -> Reminders
 run = fst . uncurry eval
-
-defaultBucket :: Bucket
-defaultBucket = Bucket "1" "The List"
 
 commandSpec :: Spec
 commandSpec = describe "Synchronization commands" $ do
@@ -65,6 +65,12 @@ commandSpec = describe "Synchronization commands" $ do
           rs'' = run (rs', create defaultBucket r)
       in  notElem r rs ==> length rs' == length rs''
 
+    it "should return an error if destination is invalid" $ property $ \r ->
+      let _             = r :: Reminder
+          invalidBucket = Bucket "2" "Invalid"
+          (_, res)      = eval [] (create invalidBucket r)
+      in  res == (Left $ InvalidDestinationError "Invalid")
+
   describe "delete command" $ it "should remove todos" $ property $ \r rs ->
     let _    = (r :: Reminder, rs :: Reminders)
         rs'' = r : rs
@@ -79,12 +85,17 @@ commandSpec = describe "Synchronization commands" $ do
         updated          = not . null $ filter ((== value) . todoName) rs'
     in  not (null rs) ==> length uniq == length rs' && updated
 
-  describe "synchronize command"
-    $ it "synchronizes states of two lists"
-    $ property
-    $ \input state ->
-        let _       = (input :: Reminders, state :: Reminders)
-            input'  = sort input
-            state'  = sort state
-            state'' = run (state', sync (bucketName defaultBucket) input')
-        in  input' /= state' ==> input' == sort state''
+  describe "synchronize command" $ do
+
+    it "synchronizes states of two lists" $ property $ \input state ->
+      let _       = (input :: Reminders, state :: Reminders)
+          input'  = sort input
+          state'  = sort state
+          state'' = run (state', sync (bucketName defaultBucket) input')
+      in  input' /= state' ==> input' == sort state''
+
+    it "should return an error if destination is invalid" $ property $ \r ->
+      let _             = r :: Reminder
+          invalidBucket = Bucket "2" "Invalid"
+          (_, res)      = eval [] (sync (bucketName invalidBucket) [r])
+      in  res == (Left $ InvalidDestinationError "Invalid")

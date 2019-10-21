@@ -45,15 +45,8 @@ import           Universum
 
 -- | Make a few new reminders in some list
 createManyScript :: BucketId -> [A.Reminder] -> LByteString
-createManyScript _ rems = header
-  <> mconcat (fmap (\n -> mconcat [st, encode n, en]) rems)
- where
-  st :: LByteString
-  st = "app.defaultList.reminders.push(app.Reminder("
-  en :: LByteString
-  en = "));"
-  header :: LByteString
-  header = "app = Application(\"Reminders\"); \n"
+createManyScript _ rems = "app = Application(\"Reminders\"); \n" <> mconcat
+  ((\n -> "app.defaultList.reminders.push(app.Reminder(" <> encode n <> "));") <$> rems)
 
 -- | List all reminders in a list
 listAllScript :: BucketId -> LByteString

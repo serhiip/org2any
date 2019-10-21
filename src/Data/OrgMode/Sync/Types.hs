@@ -97,7 +97,7 @@ data SyncError
   -- but usefull to see during development
   | FileReadError FilePath Text
   -- ^ Error reading input file
-  deriving (Show)
+  deriving (Show, Eq)
 
 instance ToLogStr SyncError where
   toLogStr (SysCallError bs) = toLogStr bs
