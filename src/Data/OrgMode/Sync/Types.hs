@@ -33,7 +33,6 @@ where
 import           Control.Concurrent.Chan        ( Chan )
 import           Control.Monad.Except           ( MonadError(..) )
 import           Data.Function                  ( on )
-import qualified Data.Text                     as T
 import           System.FilePath                ( FilePath )
 import           System.Log.FastLogger          ( TimedFastLogger
                                                 , ToLogStr(..)
@@ -49,7 +48,7 @@ data Verbosity
 
 -- | Events coming from outside world (user or system)
 data Event
-  = UserTerminatedEvent T.Text
+  = UserTerminatedEvent Text
   -- ^ User requested the program termination
   | SystemTerminatedEvent
   -- ^ SIGINT or SIGTERM received from OS
@@ -105,7 +104,7 @@ instance ToLogStr SyncError where
     toLogStr $ "No org items found to import in " <> toText path
   toLogStr (InvalidDestinationError destination) =
     toLogStr $ "There was an error getting reminders from "
-    <> T.unpack destination
+    <> destination
     <> ". Try specifying different name"
   toLogStr (DecodeError raw err) = toLogStr $
     "Error decoding output "
@@ -130,10 +129,13 @@ data TodoStatus
 -- intermediate type of various types of reminders (at this point only
 -- org headlines or items of Reminders OS X application)
 data Reminder = Reminder
-  { todoName   :: T.Text
-  , todoId     :: T.Text
-  , todoBody   :: Maybe T.Text
+  { todoName   :: Text
+  , todoId     :: Text
+  , todoBody   :: Maybe Text
   , todoStatus :: Maybe TodoStatus
+  , todoOriginalId :: Text
+  -- ^ The ID in the destination it was created from (for org file
+  -- @todoId == todoOriginalId@)
   } deriving (Show)
 
 instance Eq Reminder where
@@ -164,14 +166,14 @@ type Buckets = [Bucket]
 -- concrete implementation of reminder by converting TODO items on the
 -- fly
 class OrgLike a where
-  from :: a -> Reminder
+  from :: a -> Maybe Reminder
   -- ^ Convert some representation to internal representation
   to :: Reminder -> a
   -- ^ Convert internal representation to some other TODO
   -- representation
 
 instance OrgLike Reminder where
-  from = id
+  from = pure
   to = id
 
 -- | Main transformers stack. Allows to do IO, monadic computation,

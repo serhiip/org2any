@@ -41,10 +41,10 @@ runParser = first (SysCallError . fromString) . A.parseOnly O.parseDocument
 
 -- | Convert org document headlines to internal representation
 titles :: (Applicative m, Monoid (m Reminder)) => O.Headline -> m Reminder
-titles h@O.Headline {..} = pure (Reminder title (rid section) (body h) status)
+titles h@O.Headline {..} = pure (Reminder title rid (body h) status rid)
   <> mconcat (titles <$> O.subHeadlines h)
  where
-  rid      = lookupId . O.unProperties . O.sectionProperties
+  rid      = lookupId . O.unProperties . O.sectionProperties $ section
   lookupId = lookupDefault (T.pack "noid") (T.pack "ID")
   headl    = O.sectionContents . O.section
 

@@ -19,7 +19,7 @@ module Data.OrgMode.Sync.AppleScript.Internal
   , listAllScript
   , deleteManyScript
   , updateManyScript
-  , decodeRemindersList
+  , decodeOSXReminders
   , listListsScript
   , convertBucket
   )
@@ -32,13 +32,7 @@ import           Data.Aeson                     ( encode
                                                 )
 import           Data.Bifunctor                 ( first )
 import qualified Data.Map.Strict               as MS
-import           Data.Text                      ( splitOn
-                                                , strip
-                                                )
-import           Data.OrgMode.Sync.Types        ( Reminders
-                                                , Reminder(..)
-                                                , TodoStatus(..)
-                                                , BucketId
+import           Data.OrgMode.Sync.Types        ( BucketId
                                                 , Bucket(..)
                                                 )
 import           Universum
@@ -126,16 +120,8 @@ listListsScript
   \JSON.stringify(res);"
 
 -- | Helper function to decode the list of reminders.
-decodeRemindersList :: LByteString -> Either Text Reminders
-decodeRemindersList t = do
-  decoded <- first fromString (eitherDecode t)
-  let names = A.todoName <$> decoded
-      rems  = make . splitOn "|" <$> names
-
-  return rems
- where
-  make (name : id' : _) = Reminder (strip name) id' (Just "a") (pure Todo) -- TODO
-  make _                = error "should not happen"
+decodeOSXReminders :: LByteString -> Either Text [A.Reminder]
+decodeOSXReminders = first toText . eitherDecode
 
 -- | Convert Reminders app representation to generic one
 convertBucket :: A.ReminderList -> Bucket

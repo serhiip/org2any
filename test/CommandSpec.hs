@@ -27,7 +27,7 @@ instance Arbitrary TodoStatus where
   arbitrary = oneof $ return <$> [Done, Todo, InProgress]
 
 instance Arbitrary Reminder where
-  arbitrary = Reminder <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = Reminder <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 defaultBucket :: Bucket
 defaultBucket = Bucket "1" "The List"

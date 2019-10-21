@@ -32,6 +32,10 @@ import           Data.Aeson                     ( ToJSON(..)
 import           Data.Char                      ( toLower )
 import qualified Data.OrgMode.Sync.Types       as O
 import           Universum
+import           Data.Text                      ( splitOn
+                                                , strip
+                                                )
+
 
 -- | A Reminders OS X app representation of TODO list
 data ReminderList = ReminderList {
@@ -90,8 +94,10 @@ instance ToJSON Reminder where
             }
 
 instance O.OrgLike Reminder where
-  from Reminder{..} = O.Reminder todoName todoId todoBody (Just status)
+  from Reminder{..} = make . splitOn "|" $ todoName
     where status = if todoCompleted then O.Done else O.InProgress
+          make (name : orgId : _) = pure $ O.Reminder (strip name) orgId todoBody (pure status) todoId
+          make _                = mzero
 
   to O.Reminder{..} = Reminder todoId
                        todoBody
