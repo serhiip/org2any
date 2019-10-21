@@ -1,10 +1,10 @@
 import           AppleScriptSpec
-import           LibSpec
+import           CommandSpec
 import           Test.Hspec
 import           Universum
 
 
 main :: IO ()
 main = hspec $ do
-  spec
+  commandSpec
   remindersSpec

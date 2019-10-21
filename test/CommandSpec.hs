@@ -1,8 +1,8 @@
-{-# OPTIONS_GHC -Wno-orphans -Wno-missing-signatures #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module LibSpec
-  ( spec
+module CommandSpec
+  ( commandSpec
   )
 where
 
@@ -18,8 +18,7 @@ import           Universum               hiding ( foldl
                                                 , state
                                                 , first
                                                 )
-import           Data.List                      ( nubBy )
-import           Data.Function                  ( on )
+import           Data.List                      ( nub )
 
 instance Arbitrary Text where
   arbitrary = pack <$> arbitrary
@@ -40,13 +39,15 @@ eval rems (Free (UpdateAll _ rs x)) =
   let rest = filter (`notElem` rs) rems in eval (rs <> rest) x
 eval rems (Free (ListBuckets f)) = eval rems . f $ [defaultBucket]
 
+run :: (Reminders, Command b) -> Reminders
 run = fst . uncurry eval
 
+defaultBucket :: Bucket
 defaultBucket = Bucket "1" "The List"
 
-spec :: Spec
-spec = describe "Commands" $ do
-  describe "create" $ do
+commandSpec :: Spec
+commandSpec = describe "Synchronization commands" $ do
+  describe "create command" $ do
 
     it "should add new todos" $ property $ \r rs ->
       let _   = (r :: Reminder, rs :: Reminders)
@@ -64,26 +65,26 @@ spec = describe "Commands" $ do
           rs'' = run (rs', create defaultBucket r)
       in  notElem r rs ==> length rs' == length rs''
 
-  describe "del" $ it "should remove todos" $ property $ \r rs ->
+  describe "delete command" $ it "should remove todos" $ property $ \r rs ->
     let _    = (r :: Reminder, rs :: Reminders)
         rs'' = r : rs
         rs'  = run (rs'', del defaultBucket r)
     in  r `notElem` rs'
 
-  describe "update" $ it "should update" $ property $ \rs ->
-    let uniq@(first : _) = nubBy ((==) `on` todoId) rs :: Reminders
+  describe "update command" $ it "should update" $ property $ \rs ->
+    let uniq@(first : _) = nub rs :: Reminders
         value            = pack "special name"
-        rs' = run (uniq, updateMany defaultBucket [first { todoName = value }])
+        modified         = first { todoName = value }
+        rs'              = run (uniq, updateMany defaultBucket [modified])
         updated          = not . null $ filter ((== value) . todoName) rs'
     in  not (null rs) ==> length uniq == length rs' && updated
 
-  describe "sync" $ it "synchronizes states of two lists" $ property $ \input state ->
-    let _       = (input :: Reminders, state :: Reminders)
-        input'  = nubBy ((==) `on` todoId) input
-        state'  = nubBy ((==) `on` todoId) state
-        state'' = run (state', sync (bucketName defaultBucket) input')
-    in  length input'
-        /=  length state'
-        &&  not (null state')
-        ==> length input'
-        ==  length state''
+  describe "synchronize command"
+    $ it "synchronizes states of two lists"
+    $ property
+    $ \input state ->
+        let _       = (input :: Reminders, state :: Reminders)
+            input'  = sort input
+            state'  = sort state
+            state'' = run (state', sync (bucketName defaultBucket) input')
+        in  input' /= state' ==> input' == sort state''
