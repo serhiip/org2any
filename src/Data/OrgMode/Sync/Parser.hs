@@ -24,7 +24,7 @@ import           Universum
 
 import qualified Data.Attoparsec.Text          as A
 import           Data.Bifunctor                 ( first )
-import           Data.HashMap.Strict.InsOrd     ( lookupDefault )
+import           Data.HashMap.Strict     ( lookupDefault )
 import qualified Data.OrgMode.Parse            as O
 import qualified Data.OrgMode.Types            as O
 import qualified Data.Text                     as T
@@ -37,20 +37,16 @@ import           Data.Monoid                    ( mconcat )
 
 -- | Execute a parser against given string
 runParser :: T.Text -> Either SyncError O.Document
-runParser = first (SysCallError . fromString) . A.parseOnly O.parseDocument
+runParser = first (SysCallError . fromString) . A.parseOnly (O.parseDocument ["TODO", "DONE", "WAIT"])
 
 -- | Convert org document headlines to internal representation
 titles :: (Applicative m, Monoid (m Reminder)) => O.Headline -> m Reminder
-titles h@O.Headline {..} = pure (Reminder title rid (body h) status rid)
+titles h@O.Headline {..} = pure (Reminder title rid (Just $ headl h) status rid)
   <> mconcat (titles <$> O.subHeadlines h)
  where
   rid      = lookupId . O.unProperties . O.sectionProperties $ section
   lookupId = lookupDefault (T.pack "noid") (T.pack "ID")
-  headl    = O.sectionContents . O.section
-
-  body (headl -> []) = Just T.empty
-  body (headl -> [O.Paragraph [O.Plain txt]]) = Just txt
-  body _ = Nothing
+  headl    = O.sectionParagraph . O.section
 
   status = O.stateKeyword h >>= mkStatus . T.unpack . O.unStateKeyword
 

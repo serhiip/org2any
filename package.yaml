@@ -24,7 +24,7 @@ dependencies:
 - typed-process == 0.2.6.0
 - bytestring
 - text == 1.2.3.1
-- orgmode-parse == 0.3.0
+- orgmode-parse == 0.2.2
 - fsnotify == 0.3.0.1
 - thyme == 0.3.5.5
 - attoparsec == 0.13.2.3
