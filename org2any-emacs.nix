@@ -1,7 +1,7 @@
 with (import <nixpkgs> {});
 
 stdenv.mkDerivation {
-  name = "org2any";
+  name = "org2any-emacs";
   version = "0.0.1";
   src = ./org2any.el;
   unpackPhase = ":";
