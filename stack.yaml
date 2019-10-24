@@ -1,7 +1,10 @@
-resolver: lts-13.29
+resolver: lts-14.11
 
 packages:
 - .
 extra-deps:
-- orgmode-parse
+- orgmode-parse-0.2.2@sha256:f87892fcfac076d51d18f2dfda008f89a1e26b95c70cfdf63c6f52d09b19ad13,3700
+nix:
+  enable: true
+  shell-file: lib.nix
 
