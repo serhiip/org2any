@@ -1,0 +1,17 @@
+name: Tests
+
+on: [push]
+
+jobs:
+  tests:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install Nix
+      uses: cachix/install-nix-action@v5
+    - name: Run tests
+      run: |
+        echo Running tests
+        nix-shell --run "stack test"
