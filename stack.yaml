@@ -4,7 +4,4 @@ packages:
 - .
 extra-deps:
 - orgmode-parse-0.2.3
-nix:
-  enable: true
-  shell-file: lib.nix
 

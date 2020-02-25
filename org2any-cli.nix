@@ -2,7 +2,7 @@
 , directory, fast-logger, filepath, free, fsnotify, hpack, hspec
 , insert-ordered-containers, mtl, optparse-applicative
 , orgmode-parse, QuickCheck, random, stdenv, text, thyme, time
-, typed-process, unix, universum, unordered-containers, uuid
+, typed-process, unix, universum, unordered-containers, uuid, base
 }:
 mkDerivation {
   pname = "org2any-cli";
