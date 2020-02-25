@@ -1,0 +1,144 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.33.0.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 8d1c2fe3e51718aac4c32bd5646f8eeb0c99df8e47d402dbefee11284c146a43
+
+name:           org2any
+version:        0.1.0.0
+description:    Please see the README on Github at <https://github.com/serhiip/org2any#readme>
+homepage:       https://github.com/serhiip/org2any#readme
+bug-reports:    https://github.com/serhiip/org2any/issues
+author:         Serhii Pererva
+maintainer:     serhii.pererva@gmail.com
+copyright:      Copyright (c) 2018 Serhii Pererva
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    ChangeLog.md
+
+source-repository head
+  type: git
+  location: https://github.com/serhiip/org2any
+
+library
+  exposed-modules:
+      Data.OrgMode.Sync.AppleScript
+      Data.OrgMode.Sync.AppleScript.Internal
+      Data.OrgMode.Sync.AppleScript.Types
+      Data.OrgMode.Sync.Command
+      Data.OrgMode.Sync.Executor
+      Data.OrgMode.Sync.Logging
+      Data.OrgMode.Sync.Parser
+      Data.OrgMode.Sync.Types
+  other-modules:
+      Paths_org2any
+  hs-source-dirs:
+      src
+  default-extensions: NoImplicitPrelude
+  ghc-options: -Wall -Werror
+  build-depends:
+      aeson ==1.4.6.0
+    , attoparsec ==0.13.2.3
+    , base >=4.7 && <5
+    , bytestring
+    , containers ==0.6.0.1
+    , directory ==1.3.3.0
+    , fast-logger ==2.4.17
+    , filepath ==1.4.2.1
+    , free ==5.1.3
+    , fsnotify ==0.3.0.1
+    , insert-ordered-containers ==0.2.2
+    , mtl ==2.2.2
+    , optparse-applicative ==0.14.3.0
+    , orgmode-parse ==0.2.3
+    , random ==1.1
+    , text ==1.2.3.1
+    , thyme ==0.3.5.5
+    , time ==1.8.0.2
+    , typed-process ==0.2.6.0
+    , universum ==1.5.0
+    , unix ==2.7.2.2
+    , unordered-containers ==0.2.10.0
+    , uuid ==1.3.13
+  default-language: Haskell2010
+
+executable org2any
+  main-is: Main.hs
+  other-modules:
+      Args
+      Paths_org2any
+  hs-source-dirs:
+      app
+  default-extensions: NoImplicitPrelude
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -Werror
+  build-depends:
+      aeson ==1.4.6.0
+    , attoparsec ==0.13.2.3
+    , base >=4.7 && <5
+    , bytestring
+    , containers ==0.6.0.1
+    , directory ==1.3.3.0
+    , fast-logger ==2.4.17
+    , filepath ==1.4.2.1
+    , free ==5.1.3
+    , fsnotify ==0.3.0.1
+    , insert-ordered-containers ==0.2.2
+    , mtl ==2.2.2
+    , optparse-applicative ==0.14.3.0
+    , org2any
+    , orgmode-parse ==0.2.3
+    , random ==1.1
+    , text ==1.2.3.1
+    , thyme ==0.3.5.5
+    , time ==1.8.0.2
+    , typed-process ==0.2.6.0
+    , universum ==1.5.0
+    , unix ==2.7.2.2
+    , unordered-containers ==0.2.10.0
+    , uuid ==1.3.13
+  default-language: Haskell2010
+
+test-suite org2any-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      AppleScriptSpec
+      CommandSpec
+      Paths_org2any
+  hs-source-dirs:
+      test
+  default-extensions: NoImplicitPrelude
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -Werror
+  build-depends:
+      QuickCheck ==2.13.2
+    , aeson ==1.4.6.0
+    , attoparsec ==0.13.2.3
+    , base >=4.7 && <5
+    , bytestring
+    , containers ==0.6.0.1
+    , directory ==1.3.3.0
+    , fast-logger ==2.4.17
+    , filepath ==1.4.2.1
+    , free ==5.1.3
+    , fsnotify ==0.3.0.1
+    , hspec ==2.7.1
+    , insert-ordered-containers ==0.2.2
+    , mtl ==2.2.2
+    , optparse-applicative ==0.14.3.0
+    , org2any
+    , orgmode-parse ==0.2.3
+    , random ==1.1
+    , text ==1.2.3.1
+    , thyme ==0.3.5.5
+    , time ==1.8.0.2
+    , typed-process ==0.2.6.0
+    , universum ==1.5.0
+    , unix ==2.7.2.2
+    , unordered-containers ==0.2.10.0
+    , uuid ==1.3.13
+  default-language: Haskell2010
