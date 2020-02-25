@@ -1,4 +1,6 @@
 .stack-work/
-org2any.cabal
+/org2any.cabal
 result
 *~
+/dist-newstyle/
+/cabal.project.local
