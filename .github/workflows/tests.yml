@@ -14,4 +14,4 @@ jobs:
     - name: Run tests
       run: |
         echo Running tests
-        nix-shell --run "cabal new-test"
+        nix-shell --run "cabal update && cabal new-test"
