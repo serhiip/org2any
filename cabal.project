@@ -1,1 +1,5 @@
-test-show-details: direct
+packages:
+         ./
+
+package org2any
+        test-show-details: direct
