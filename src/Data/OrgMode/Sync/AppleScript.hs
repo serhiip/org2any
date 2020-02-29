@@ -50,8 +50,9 @@ execute script = do
 evalAppleScript :: Command x -> Result x
 evalAppleScript (Pure r                ) = return r
 evalAppleScript (Free (GetAll bucket f)) = do
-  raw <- execute (listAllScript $ bucketId bucket)
-  osxReminders <- liftEither $ first (DecodeError $ decodeUtf8 raw) (decodeOSXReminders raw)
+  raw          <- execute (listAllScript $ bucketId bucket)
+  osxReminders <- liftEither
+    $ first (DecodeError $ decodeUtf8 raw) (decodeOSXReminders raw)
   evalAppleScript . f . mapMaybe from $ osxReminders
 
 evalAppleScript (Free (CreateMany bucket rs rest)) = do

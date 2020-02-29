@@ -106,8 +106,8 @@ updateManyScript bid reminders =
 
 -- | Get a list of available reminder lists
 listListsScript :: LByteString
-listListsScript
-  = "app = Application('Reminders'); \n\
+listListsScript =
+  "app = Application('Reminders'); \n\
   \const res = app.lists().map(reminder => { \n\
     \const props = reminder.properties(); \n\
     \props['container'] = null; \n\

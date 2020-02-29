@@ -39,7 +39,7 @@ import           Universum
 
 instance ToLogStr Severity where
   toLogStr Debug = toLogStr $ TL.pack "[DEBUG]"
-  toLogStr Info = toLogStr $ TL.pack "[INFO] "
+  toLogStr Info  = toLogStr $ TL.pack "[INFO] "
   toLogStr Error = toLogStr $ TL.pack "[ERROR]"
 
 -- | Logging severity and destination (STDOUT / STDERR)

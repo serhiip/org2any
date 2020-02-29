@@ -11,7 +11,6 @@ Org file parsing utilities via
 
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE ViewPatterns #-}
 
 module Data.OrgMode.Sync.Parser
   ( titles
@@ -24,7 +23,7 @@ import           Universum
 
 import qualified Data.Attoparsec.Text          as A
 import           Data.Bifunctor                 ( first )
-import           Data.HashMap.Strict     ( lookupDefault )
+import           Data.HashMap.Strict            ( lookupDefault )
 import qualified Data.OrgMode.Parse            as O
 import qualified Data.OrgMode.Types            as O
 import qualified Data.Text                     as T
@@ -37,7 +36,8 @@ import           Data.Monoid                    ( mconcat )
 
 -- | Execute a parser against given string
 runParser :: T.Text -> Either SyncError O.Document
-runParser = first (SysCallError . fromString) . A.parseOnly (O.parseDocument ["TODO", "DONE", "WAIT"])
+runParser = first (SysCallError . fromString)
+  . A.parseOnly (O.parseDocument ["TODO", "DONE", "WAIT"])
 
 -- | Convert org document headlines to internal representation
 titles :: (Applicative m, Monoid (m Reminder)) => O.Headline -> m Reminder
@@ -48,7 +48,7 @@ titles h@O.Headline {..} = pure (Reminder title rid (Just $ headl h) status rid)
   lookupId = lookupDefault (T.pack "noid") (T.pack "ID")
   headl    = O.sectionParagraph . O.section
 
-  status = O.stateKeyword h >>= mkStatus . T.unpack . O.unStateKeyword
+  status   = O.stateKeyword h >>= mkStatus . T.unpack . O.unStateKeyword
 
   mkStatus "DONE" = Just Done
   mkStatus "TODO" = Just Todo

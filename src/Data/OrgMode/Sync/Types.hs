@@ -103,19 +103,14 @@ instance ToLogStr SyncError where
   toLogStr (NoItemsError path) =
     toLogStr $ "No org items found to import in " <> toText path
   toLogStr (InvalidDestinationError destination) =
-    toLogStr $ "There was an error getting reminders from "
-    <> destination
-    <> ". Try specifying different name"
-  toLogStr (DecodeError raw err) = toLogStr $
-    "Error decoding output "
-    <> toText raw
-    <> " got error "
-    <> toText err
-  toLogStr (FileReadError path original) = toLogStr $
-    "There was an error reading "
-    <> toText path
-    <> " got error "
-    <> original
+    toLogStr
+      $  "There was an error getting reminders from "
+      <> destination
+      <> ". Try specifying different name"
+  toLogStr (DecodeError raw err) =
+    toLogStr $ "Error decoding output " <> toText raw <> " got error " <> toText err
+  toLogStr (FileReadError path original) =
+    toLogStr $ "There was an error reading " <> toText path <> " got error " <> original
 
 -- | Status keyword for headlines in org file. Has no support for
 -- custom status keywords yet
@@ -174,7 +169,7 @@ class OrgLike a where
 
 instance OrgLike Reminder where
   from = pure
-  to = id
+  to   = id
 
 -- | Main transformers stack. Allows to do IO, monadic computation,
 -- have common context (via Reader) and work with pure exceptions

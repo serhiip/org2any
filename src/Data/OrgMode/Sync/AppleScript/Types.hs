@@ -64,50 +64,48 @@ data Reminder = Reminder {
   } deriving (Show, Generic)
 
 instance FromJSON Reminder where
-  parseJSON = withObject "Todo" $ \v -> Reminder
-    <$> v .: "id"
-    <*> v .:? "body"
-    <*> v .: "completed"
-    <*> v .: "name"
-    <*> v .: "priority"
-    <*> v .:? "dueDate"
-    <*> v .:? "modificationDate"
-    <*> v .:? "creationDate"
-    <*> v .:? "completionDate"
-    <*> v .:? "remindMeDate"
+  parseJSON = withObject "Todo" $ \value ->
+    Reminder
+      <$> (value .: "id")
+      <*> (value .:? "body")
+      <*> (value .: "completed")
+      <*> (value .: "name")
+      <*> (value .: "priority")
+      <*> (value .:? "dueDate")
+      <*> (value .:? "modificationDate")
+      <*> (value .:? "creationDate")
+      <*> (value .:? "completionDate")
+      <*> (value .:? "remindMeDate")
 
 instance FromJSON ReminderList where
-  parseJSON = withObject "TodoList" $ \l -> ReminderList
-    <$> l .: "id"
-    <*> l .: "name"
+  parseJSON = withObject "TodoList" $ \l -> ReminderList <$> l .: "id" <*> l .: "name"
 
 instance ToJSON Reminder where
-  toEncoding r = enc r { todoName = todoName r <> " |" <> todoId r}
-    where
-      enc =
-            genericToEncoding defaultOptions
-            { fieldLabelModifier =
-              let
-                firstToLower (f:rest) = toLower f : rest
-                firstToLower [] = []
-              in firstToLower . drop (length @String "todo")
-            }
+  toEncoding r = enc r { todoName = todoName r <> " |" <> todoId r }
+   where
+    enc = genericToEncoding defaultOptions
+      { fieldLabelModifier = let firstToLower (f : rest) = toLower f : rest
+                                 firstToLower []         = []
+                             in  firstToLower . drop (length @String "todo")
+      }
 
 instance O.OrgLike Reminder where
-  from Reminder{..} = make . splitOn "|" $ todoName
-    where status = if todoCompleted then O.Done else O.InProgress
-          make (name : orgId : _) = pure $ O.Reminder (strip name) orgId todoBody (pure status) todoId
-          make _                = mzero
+  from Reminder {..} = make . splitOn "|" $ todoName
+   where
+    status = if todoCompleted then O.Done else O.InProgress
+    make (name : orgId : _) =
+      pure $ O.Reminder (strip name) orgId todoBody (pure status) todoId
+    make _ = mzero
 
-  to O.Reminder{..} = Reminder todoId
-                       todoBody
-                       (Just O.Done == todoStatus)
-                       todoName
-                       0
-                       Nothing
-                       Nothing
-                       Nothing
-                       Nothing
-                       Nothing
+  to O.Reminder {..} = Reminder todoId
+                                todoBody
+                                (Just O.Done == todoStatus)
+                                todoName
+                                0
+                                Nothing
+                                Nothing
+                                Nothing
+                                Nothing
+                                Nothing
 
 

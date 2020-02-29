@@ -52,11 +52,11 @@ data CommandF x
   -- ^ List available buckets of reminders
 
 instance Functor CommandF where
-  fmap f (GetAll bid f') = GetAll bid (f . f')
+  fmap f (GetAll bid f'      ) = GetAll bid (f . f')
   fmap f (CreateMany bid rs x) = CreateMany bid rs (f x)
   fmap f (DeleteMany bid rs x) = DeleteMany bid rs (f x)
-  fmap f (UpdateAll bid rs x) = UpdateAll bid rs (f x)
-  fmap f (ListBuckets f') = ListBuckets (f . f')
+  fmap f (UpdateAll  bid rs x) = UpdateAll bid rs (f x)
+  fmap f (ListBuckets f'     ) = ListBuckets (f . f')
 
 -- | A description of a programm detached from its implementation
 type Command = Free CommandF
