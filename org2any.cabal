@@ -1,13 +1,7 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.33.0.
---
--- see: https://github.com/sol/hpack
---
--- hash: 8d1c2fe3e51718aac4c32bd5646f8eeb0c99df8e47d402dbefee11284c146a43
-
 name:           org2any
-version:        0.1.0.0
+version:        0.0.10
 description:    Please see the README on Github at <https://github.com/serhiip/org2any#readme>
 homepage:       https://github.com/serhiip/org2any#readme
 bug-reports:    https://github.com/serhiip/org2any/issues
