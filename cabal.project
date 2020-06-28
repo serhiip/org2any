@@ -3,3 +3,5 @@ packages:
 
 package org2any
         test-show-details: direct
+
+tests: True
