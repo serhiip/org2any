@@ -34,7 +34,6 @@ import           Universum               hiding ( elem
 import           Data.List                      ( partition
                                                 , elem
                                                 , notElem
-                                                , filter
                                                 )
 
 -- | An action that could be performed. All of the action work against

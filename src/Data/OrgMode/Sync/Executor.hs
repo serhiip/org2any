@@ -10,6 +10,7 @@ Handles the event coming to the program: either user events
 -}
 
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Data.OrgMode.Sync.Executor
   ( execute
@@ -21,12 +22,11 @@ import           Data.OrgMode.Sync.Command
 import           Control.Concurrent.Chan        ( readChan
                                                 , writeChan
                                                 )
-import           Control.Exception              ( IOException )
-import           Control.Monad.Except           ( throwError
+import           Control.Monad.Except           ( MonadError
+                                                , throwError
                                                 , liftEither
                                                 )
 import           Data.Text                      ( pack )
-import           Data.Text.IO                   ( hGetContents )
 import           Data.OrgMode.Sync.Logging
 import           Data.OrgMode.Sync.Parser       ( reminders
                                                 , runParser
@@ -40,7 +40,14 @@ import           Universum
 -- execution. Handlers are executed -- synchronously - new incomming
 -- request will be queued up in an input channel if this thread is
 -- busy executing previous request
-execute :: Result ()
+
+execute :: ( MonadIO m
+           , MonadFileReader m
+           , MonadReader Bootstrapped m
+           , MonadLogger m
+           , MonadError SyncError m
+           )
+        => m ()
 execute = do
   input  <- reader bootstrappedInput
   output <- reader bootstrappedOutput
@@ -52,7 +59,7 @@ execute = do
     SystemTerminatedEvent         -> logError (pack "org2any was terminated") *> notifyEnd
     SyncEvent filePath dst        -> do
       logInfo $ "Processing " <> filePath
-      readResult <- readFilePath
+      readResult <- readFileM filePath
       contents   <- liftEither $ first (FileReadError filePath . show) readResult
       orgTree    <- liftEither $ runParser contents
 
@@ -65,6 +72,3 @@ execute = do
       liftEither result
 
       logDebug $ "Done synchronizing " <> show filePath <> " to " <> name
-     where
-      readFilePath :: Result (Either IOException Text)
-      readFilePath = try . liftIO $ withFile filePath ReadMode hGetContents

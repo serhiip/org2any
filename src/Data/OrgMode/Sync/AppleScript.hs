@@ -10,6 +10,7 @@ Executes the sequence of `Data.OrgMode.Sync.Command.Command`s to
 -}
 
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Data.OrgMode.Sync.AppleScript
   ( evalAppleScript
@@ -22,10 +23,10 @@ import           Data.OrgMode.Sync.Command      ( Command
                                                 )
 import           Control.Monad.Except           ( throwError
                                                 , liftEither
+                                                , MonadError(..)
                                                 )
 import           Control.Monad.Free             ( Free(..) )
 import           Data.Aeson                     ( eitherDecode )
-import           Data.Bifunctor                 ( first )
 import           System.Exit                    ( ExitCode(..) )
 import           System.Process.Typed           ( proc
                                                 , readProcess
@@ -34,7 +35,7 @@ import           Data.OrgMode.Sync.Types
 import           Universum
 import           Data.OrgMode.Sync.Logging
 
-execute :: LByteString -> Result LByteString
+execute :: (MonadIO m, MonadLogger m, MonadError SyncError m) => LByteString -> m LByteString
 execute script = do
   (exitCode, out, err) <- liftIO . readProcess $ proc
     "/usr/bin/osascript"
@@ -47,7 +48,7 @@ execute script = do
 -- OS X application via
 -- <https://www.unix.com/man-page/osx/1/osascript/ osascript> system
 -- utility
-evalAppleScript :: Command x -> Result x
+evalAppleScript :: (MonadIO m, MonadLogger m, MonadError SyncError m) => Command x -> m x
 evalAppleScript (Pure r                ) = return r
 evalAppleScript (Free (GetAll bucket f)) = do
   raw          <- execute (listAllScript $ bucketId bucket)

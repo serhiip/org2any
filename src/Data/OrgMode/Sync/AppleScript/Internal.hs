@@ -30,7 +30,6 @@ import qualified Data.OrgMode.Sync.AppleScript.Types
 import           Data.Aeson                     ( encode
                                                 , eitherDecode
                                                 )
-import           Data.Bifunctor                 ( first )
 import qualified Data.Map.Strict               as MS
 import           Data.OrgMode.Sync.Types        ( BucketId
                                                 , Bucket(..)

@@ -11,6 +11,7 @@ Reminder item internal represenatation, main transformer stack and
 
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Data.OrgMode.Sync.Types
   ( Reminder(..)
@@ -21,23 +22,26 @@ module Data.OrgMode.Sync.Types
   , Event(..)
   , Result
   , runResult
+  , ResultT(..)
+  , runResultT
   , SyncConfig(..)
   , Verbosity(..)
   , SyncError(..)
   , Bootstrapped(..)
   , Bucket(..)
   , OrgLike(..)
+  , MonadFileReader(..)
   )
 where
 
 import           Control.Concurrent.Chan        ( Chan )
 import           Control.Monad.Except           ( MonadError(..) )
-import           Data.Function                  ( on )
-import           System.FilePath                ( FilePath )
 import           System.Log.FastLogger          ( TimedFastLogger
                                                 , ToLogStr(..)
                                                 )
 import           Universum
+import           Control.Exception              ( IOException )
+import           Data.Text.IO                   ( hGetContents )
 
 -- | The amount of logging output 
 data Verbosity
@@ -170,6 +174,14 @@ class OrgLike a where
 instance OrgLike Reminder where
   from = pure
   to   = id
+
+class MonadFileReader m where
+
+  readFileM :: FilePath -> m (Either IOException Text)
+
+instance (MonadIO m, MonadCatch m) => MonadFileReader (ResultT m) where
+
+  readFileM filePath = try . liftIO $ withFile filePath ReadMode hGetContents
 
 -- | Main transformers stack. Allows to do IO, monadic computation,
 -- have common context (via Reader) and work with pure exceptions

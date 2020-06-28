@@ -22,7 +22,6 @@ where
 import           Universum
 
 import qualified Data.Attoparsec.Text          as A
-import           Data.Bifunctor                 ( first )
 import           Data.HashMap.Strict            ( lookupDefault )
 import qualified Data.OrgMode.Parse            as O
 import qualified Data.OrgMode.Types            as O
@@ -32,7 +31,6 @@ import           Data.OrgMode.Sync.Types        ( Reminder(..)
                                                 , TodoStatus(..)
                                                 , SyncError(..)
                                                 )
-import           Data.Monoid                    ( mconcat )
 
 -- | Execute a parser against given string
 runParser :: T.Text -> Either SyncError O.Document

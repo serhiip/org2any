@@ -10,17 +10,15 @@ Log meassages of various log levels either via main transfromer stack
  <https://github.com/kazu-yamamoto/logger kazu-yamamoto/logger>
 -}
 
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Data.OrgMode.Sync.Logging
   ( initLogging
-  , logDebug
-  , logInfo
-  , logError
   , logInfo'
   , logError'
   , logDebug'
+  , MonadLogger(..)
   )
 where
 
@@ -53,9 +51,9 @@ data Severity
 initLogging :: IO (TimedFastLogger, TimedFastLogger, IO ())
 initLogging = do
   timeCache                <- newTimeCache simpleTimeFormat'
-  (stdoutLogger, cleanUp ) <- newTimedFastLogger timeCache (LogStdout 1)
-  (stderrLogger, cleanUp') <- newTimedFastLogger timeCache (LogStderr 1)
-  return (stdoutLogger, stderrLogger, cleanUp >> cleanUp')
+  (stdoutLogger, stdoutCleanUp ) <- newTimedFastLogger timeCache (LogStdout 1)
+  (stderrLogger, stderrCleanUp') <- newTimedFastLogger timeCache (LogStderr 1)
+  return (stdoutLogger, stderrLogger, stdoutCleanUp >> stderrCleanUp')
 
 -- | Generic function to log messages. Logs messages of @Error@
 -- severity to stderr. Will not emit any messages to stdout when
@@ -100,23 +98,24 @@ logError' = logMessage' Error
 logDebug' :: ToLogStr a => (TimedFastLogger, TimedFastLogger) -> Verbosity -> a -> IO ()
 logDebug' = logMessage' Debug
 
-logMessageM
-  :: (MonadIO m, ToLogStr a, MonadReader r m, r ~ Bootstrapped) => Severity -> a -> m ()
+logMessageM :: (MonadReader Bootstrapped m, MonadIO m, ToLogStr a) => Severity -> a -> m ()
 logMessageM severity message = do
-  config <- ask
-  liftIO $ logMessage' severity
-                       (bootstrappedLoggers config)
-                       (configVerbosity . bootstrappedConfig $ config)
-                       message
+  loggers <- bootstrappedLoggers <$> ask
+  verbosity <- configVerbosity . bootstrappedConfig <$> ask
+  liftIO $ logMessage' severity loggers verbosity message
 
--- | Same as `logDebug'` but more generic
-logDebug :: (MonadIO m, ToLogStr a, MonadReader r m, r ~ Bootstrapped) => a -> m ()
-logDebug = logMessageM Debug
+class MonadLogger m where
 
--- | Same as `logInfo'` but more generic
-logInfo :: (MonadIO m, ToLogStr a, MonadReader r m, r ~ Bootstrapped) => a -> m ()
-logInfo = logMessageM Info
+  logDebug :: ToLogStr a => a -> m ()
 
--- | Same as `logError'` but more generic
-logError :: (MonadIO m, ToLogStr a, MonadReader r m, r ~ Bootstrapped) => a -> m ()
-logError = logMessageM Error
+  logInfo :: ToLogStr a => a -> m ()
+
+  logError :: ToLogStr a => a -> m ()
+
+instance (MonadIO m, MonadReader Bootstrapped m) => MonadLogger (ResultT m) where
+
+  logDebug = logMessageM Debug
+
+  logInfo = logMessageM Info
+
+  logError = logMessageM Error
