@@ -18,9 +18,6 @@ module Data.OrgMode.Sync.AppleScript
 where
 
 import           Data.OrgMode.Sync.AppleScript.Internal
-import           Data.OrgMode.Sync.Command      ( Command
-                                                , CommandF(..)
-                                                )
 import           Control.Monad.Except           ( throwError
                                                 , liftEither
                                                 , MonadError(..)
@@ -35,7 +32,8 @@ import           Data.OrgMode.Sync.Types
 import           Universum
 import           Data.OrgMode.Sync.Logging
 
-execute :: (MonadIO m, MonadLogger m, MonadError SyncError m) => LByteString -> m LByteString
+execute
+  :: (MonadIO m, MonadLogger m, MonadError SyncError m) => LByteString -> m LByteString
 execute script = do
   (exitCode, out, err) <- liftIO . readProcess $ proc
     "/usr/bin/osascript"

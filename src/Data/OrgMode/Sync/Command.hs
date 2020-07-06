@@ -23,6 +23,7 @@ module Data.OrgMode.Sync.Command
   , create
   , del
   , updateMany
+  , eval
   )
 where
 
@@ -35,31 +36,6 @@ import           Data.List                      ( partition
                                                 , elem
                                                 , notElem
                                                 )
-
--- | An action that could be performed. All of the action work against
--- particular `Data.OrgMode.Sync.Types.Bucket`
-data CommandF x
-  = GetAll Bucket (Reminders -> x)
-  -- ^ List all reminders
-  | CreateMany Bucket Reminders x
-  -- ^ Create some reminders
-  | DeleteMany Bucket Reminders x
-  -- ^ Delete some reminders
-  | UpdateAll Bucket Reminders x
-  -- ^ Update some reminders
-  | ListBuckets (Buckets -> x)
-  -- ^ List available buckets of reminders
-
-instance Functor CommandF where
-  fmap f (GetAll bid f'      ) = GetAll bid (f . f')
-  fmap f (CreateMany bid rs x) = CreateMany bid rs (f x)
-  fmap f (DeleteMany bid rs x) = DeleteMany bid rs (f x)
-  fmap f (UpdateAll  bid rs x) = UpdateAll bid rs (f x)
-  fmap f (ListBuckets f'     ) = ListBuckets (f . f')
-
--- | A description of a programm detached from its implementation
-type Command = Free CommandF
-
 -- | Do nothing
 noOp :: Monad m => Command (m ())
 noOp = return $ pure ()
@@ -147,3 +123,14 @@ runDry (Free (UpdateAll bid rs rest)) =
   putStrLn @String ("would delete " <> show rs <> " in " <> show bid) >> runDry rest
 runDry (Free (ListBuckets rest)) =
   putStrLn @String "would list all todo lists" >> mempty >>= runDry . rest
+
+eval :: Reminders -> Command x -> (Reminders, x)
+eval rems (Pure r                  ) = (rems, r)
+eval rems (Free (GetAll _ f       )) = eval rems . f $ rems
+eval rems (Free (CreateMany _ rs x)) = eval (rs <> rems) x
+eval rems (Free (DeleteMany _ rs x)) =
+  let rems' = filter (not . (`elem` rs)) rems in eval rems' x
+eval rems (Free (UpdateAll _ rs x)) =
+  let rest = filter (`notElem` rs) rems in eval (rs <> rest) x
+eval rems (Free (ListBuckets f)) = eval rems . f $ [Bucket "1" "The List"]
+

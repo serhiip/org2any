@@ -6,11 +6,12 @@ module CommandSpec
   )
 where
 
-import           Data.OrgMode.Sync.Command
-import           Control.Monad.Free
-import           Data.Text                      ( Text
-                                                , pack
+import           Data.OrgMode.Sync.Command      ( sync
+                                                , updateMany
+                                                , del
+                                                , create
                                                 )
+import           Data.Text                      ( pack )
 import           Test.Hspec
 import           Test.QuickCheck
 import           Data.OrgMode.Sync.Types
@@ -19,6 +20,7 @@ import           Universum               hiding ( foldl
                                                 , first
                                                 )
 import           Data.List                      ( nub )
+import           Control.Monad.Free             ( Free(..) )
 
 instance Arbitrary Text where
   arbitrary = pack <$> arbitrary
@@ -42,11 +44,12 @@ eval rems (Free (UpdateAll _ rs x)) =
   let rest = filter (`notElem` rs) rems in eval (rs <> rest) x
 eval rems (Free (ListBuckets f)) = eval rems . f $ [defaultBucket]
 
+
 run :: (Reminders, Command b) -> Reminders
 run = fst . uncurry eval
 
 commandSpec :: Spec
-commandSpec = describe "Synchronization commands" $ do
+commandSpec = describe "Command interpreter functionality" $ do
   describe "create command" $ do
 
     it "should add new todos" $ property $ \r rs ->

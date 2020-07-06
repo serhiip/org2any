@@ -14,10 +14,10 @@ Handles the event coming to the program: either user events
 
 module Data.OrgMode.Sync.Executor
   ( execute
+  , handle
   )
 where
 
-import           Data.OrgMode.Sync.AppleScript  ( evalAppleScript )
 import           Data.OrgMode.Sync.Command
 import           Control.Concurrent.Chan        ( readChan
                                                 , writeChan
@@ -41,13 +41,15 @@ import           Universum
 -- request will be queued up in an input channel if this thread is
 -- busy executing previous request
 
-execute :: ( MonadIO m
-           , MonadFileReader m
-           , MonadReader Bootstrapped m
-           , MonadLogger m
-           , MonadError SyncError m
-           )
-        => m ()
+execute
+  :: ( MonadIO m
+     , MonadFileReader m
+     , MonadReader Bootstrapped m
+     , MonadLogger m
+     , MonadError SyncError m
+     , MonadCommandEvaluator m
+     )
+  => m ()
 execute = do
   input  <- reader bootstrappedInput
   output <- reader bootstrappedOutput
@@ -57,18 +59,29 @@ execute = do
     EndEvent                      -> notifyEnd
     UserTerminatedEvent lastWords -> logDebug lastWords *> notifyEnd
     SystemTerminatedEvent         -> logError (pack "org2any was terminated") *> notifyEnd
-    SyncEvent filePath dst        -> do
-      logInfo $ "Processing " <> filePath
-      readResult <- readFileM filePath
-      contents   <- liftEither $ first (FileReadError filePath . show) readResult
-      orgTree    <- liftEither $ runParser contents
+    SyncEvent filePath dst        -> handle $ SyncAction filePath dst
 
-      let items = reminders orgTree
-          name  = dst ?: "Reminders"
+handle
+  :: ( MonadFileReader m
+     , MonadReader Bootstrapped m
+     , MonadLogger m
+     , MonadError SyncError m
+     , MonadCommandEvaluator m
+     )
+  => ActionType
+  -> m ()
+handle (SyncAction filePath destination) = do
+  logInfo $ "Processing " <> filePath
+  readResult <- readFileM filePath
+  contents   <- liftEither $ first (FileReadError filePath . show) readResult
+  orgTree    <- liftEither $ runParser contents
 
-      when (null items) $ throwError (NoItemsError filePath)
+  let items = reminders orgTree
+      name  = destination ?: "Reminders"
 
-      result <- evalAppleScript . sync name $ items
-      liftEither result
+  when (null items) (throwError $ NoItemsError filePath)
 
-      logDebug $ "Done synchronizing " <> show filePath <> " to " <> name
+  result <- evaluate OSXReminders . sync name $ items
+  liftEither result
+
+  logDebug $ "Done synchronizing " <> show filePath <> " to " <> name

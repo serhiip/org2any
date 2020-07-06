@@ -18,6 +18,9 @@ module Data.OrgMode.Sync.Logging
   , logInfo'
   , logError'
   , logDebug'
+  , logInfoM
+  , logErrorM
+  , logDebugM
   , MonadLogger(..)
   )
 where
@@ -35,6 +38,7 @@ import           System.Log.FastLogger.Date     ( newTimeCache
 import           Data.OrgMode.Sync.Types
 import           Universum
 
+
 instance ToLogStr Severity where
   toLogStr Debug = toLogStr $ TL.pack "[DEBUG]"
   toLogStr Info  = toLogStr $ TL.pack "[INFO] "
@@ -50,7 +54,7 @@ data Severity
 -- | Helper function to initialize stderr and stdout loggers
 initLogging :: IO (TimedFastLogger, TimedFastLogger, IO ())
 initLogging = do
-  timeCache                <- newTimeCache simpleTimeFormat'
+  timeCache                      <- newTimeCache simpleTimeFormat'
   (stdoutLogger, stdoutCleanUp ) <- newTimedFastLogger timeCache (LogStdout 1)
   (stderrLogger, stderrCleanUp') <- newTimedFastLogger timeCache (LogStderr 1)
   return (stdoutLogger, stderrLogger, stdoutCleanUp >> stderrCleanUp')
@@ -98,24 +102,23 @@ logError' = logMessage' Error
 logDebug' :: ToLogStr a => (TimedFastLogger, TimedFastLogger) -> Verbosity -> a -> IO ()
 logDebug' = logMessage' Debug
 
-logMessageM :: (MonadReader Bootstrapped m, MonadIO m, ToLogStr a) => Severity -> a -> m ()
+logMessageM
+  :: (MonadReader Bootstrapped m, MonadIO m, ToLogStr a) => Severity -> a -> m ()
 logMessageM severity message = do
-  loggers <- bootstrappedLoggers <$> ask
+  loggers   <- bootstrappedLoggers <$> ask
   verbosity <- configVerbosity . bootstrappedConfig <$> ask
   liftIO $ logMessage' severity loggers verbosity message
 
-class MonadLogger m where
+logDebugM :: (MonadReader Bootstrapped m, MonadIO m, ToLogStr a) => a -> m ()
+logDebugM = logMessageM Debug
 
+logInfoM :: (MonadReader Bootstrapped m, MonadIO m, ToLogStr a) => a -> m ()
+logInfoM = logMessageM Info
+
+logErrorM :: (MonadReader Bootstrapped m, MonadIO m, ToLogStr a) => a -> m ()
+logErrorM = logMessageM Error
+
+class Monad m => MonadLogger m where
   logDebug :: ToLogStr a => a -> m ()
-
   logInfo :: ToLogStr a => a -> m ()
-
   logError :: ToLogStr a => a -> m ()
-
-instance (MonadIO m, MonadReader Bootstrapped m) => MonadLogger (ResultT m) where
-
-  logDebug = logMessageM Debug
-
-  logInfo = logMessageM Info
-
-  logError = logMessageM Error

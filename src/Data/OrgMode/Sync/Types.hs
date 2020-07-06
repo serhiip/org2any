@@ -9,7 +9,7 @@ Reminder item internal represenatation, main transformer stack and
  configuration datatypes.
 -}
 
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleInstances #-}
 
@@ -20,10 +20,7 @@ module Data.OrgMode.Sync.Types
   , Buckets
   , TodoStatus(..)
   , Event(..)
-  , Result
-  , runResult
-  , ResultT(..)
-  , runResultT
+  , ActionType(..)
   , SyncConfig(..)
   , Verbosity(..)
   , SyncError(..)
@@ -31,17 +28,20 @@ module Data.OrgMode.Sync.Types
   , Bucket(..)
   , OrgLike(..)
   , MonadFileReader(..)
+  , Command
+  , CommandF(..)
+  , MonadCommandEvaluator(..)
+  , StoreType(..)
   )
 where
 
 import           Control.Concurrent.Chan        ( Chan )
-import           Control.Monad.Except           ( MonadError(..) )
 import           System.Log.FastLogger          ( TimedFastLogger
                                                 , ToLogStr(..)
                                                 )
 import           Universum
 import           Control.Exception              ( IOException )
-import           Data.Text.IO                   ( hGetContents )
+import           Control.Monad.Free
 
 -- | The amount of logging output 
 data Verbosity
@@ -61,6 +61,12 @@ data Event
   | EndEvent
   -- ^ Signal main thread that programm could be stopped - all request
   -- are fulfiled and all resources are claned up
+  deriving (Show, Eq)
+
+-- | Action that can be performed by the system
+data ActionType
+  = SyncAction FilePath (Maybe Text)
+  -- ^ File synchronization action
   deriving (Show, Eq)
 
 -- | Configuration of how synchronization should be done,
@@ -157,6 +163,9 @@ data Bucket = Bucket { bucketId :: BucketId
                      , bucketName :: Text
                      } deriving (Show, Eq, Ord)
 
+-- | The type of program or service that would provide or store items
+data StoreType = InMemory | OSXReminders deriving (Show, Eq, Ord)
+
 -- | Alias for list of places reminders could be stored in
 type Buckets = [Bucket]
 
@@ -175,39 +184,26 @@ instance OrgLike Reminder where
   from = pure
   to   = id
 
-class MonadFileReader m where
+-- | An action that could be performed. All of the action work against
+-- particular `Data.OrgMode.Sync.Types.Bucket`
+data CommandF x
+  = GetAll Bucket (Reminders -> x)
+  -- ^ List all reminders
+  | CreateMany Bucket Reminders x
+  -- ^ Create some reminders
+  | DeleteMany Bucket Reminders x
+  -- ^ Delete some reminders
+  | UpdateAll Bucket Reminders x
+  -- ^ Update some reminders
+  | ListBuckets (Buckets -> x)
+  -- ^ List available buckets of reminders
+  deriving (Functor)
 
+-- | A description of a programm detached from its implementation
+type Command = Free CommandF
+
+class Monad m => MonadFileReader m where
   readFileM :: FilePath -> m (Either IOException Text)
 
-instance (MonadIO m, MonadCatch m) => MonadFileReader (ResultT m) where
-
-  readFileM filePath = try . liftIO $ withFile filePath ReadMode hGetContents
-
--- | Main transformers stack. Allows to do IO, monadic computation,
--- have common context (via Reader) and work with pure exceptions
-newtype ResultT m a = O2AMT
-  { getResultT :: ExceptT SyncError (ReaderT Bootstrapped m) a
-  } deriving
-  ( Functor
-  , Applicative
-  , Monad
-  , MonadIO
-  , MonadReader Bootstrapped
-  , MonadError SyncError
-  , MonadThrow
-  , MonadCatch
-  , MonadMask
-  )
-
-runResultT :: Monad m => Bootstrapped -> ResultT m a -> m (Either SyncError a)
-runResultT config = usingReaderT config . runExceptT . getResultT
-
--- | Execute trasformer stack
-runResult :: Bootstrapped -> Result a -> IO (Either SyncError a)
-runResult = runResultT
-
--- | Yield result requiring some side effects to be executed.  ResultT
--- is `newtype` alias to a set of transformers derrived using
--- <https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/glasgow_exts.html#extension-GeneralizedNewtypeDeriving GeneralizedNewtypeDeriving>
--- extension
-type Result = ResultT IO
+class Monad m => MonadCommandEvaluator m where
+   evaluate :: StoreType -> Command x -> m x
