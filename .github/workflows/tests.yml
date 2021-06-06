@@ -10,7 +10,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: Install Nix
-      uses: cachix/install-nix-action@v5
+      uses: cachix/install-nix-action@v13
     - name: Run tests
       run: |
         echo Running tests
