@@ -6,55 +6,60 @@
 
 module E2ESpec
   ( e2eSpec
-  )
-where
+  ) where
 
-import           Test.Hspec
-import           Universum
-import           Control.Monad.Except           ( MonadError(..) )
-import           Data.OrgMode.Sync.Types        ( SyncError(..)
-                                                , Reminder(..)
-                                                , SyncConfig(..)
-                                                , Verbosity(..)
-                                                , ActionType(..)
-                                                , Reminder
-                                                , MonadCommandEvaluator(..)
-                                                , MonadFileReader(..)
-                                                , Bootstrapped(..)
-                                                , SyncError
+import           Test.Hspec                     ( Expectation
+                                                , Spec
+                                                , SpecWith
+                                                , before
+                                                , describe
+                                                , it
+                                                , shouldBe
+                                                , xit
                                                 )
-import           Data.OrgMode.Sync.Logging      ( MonadLogger(..) )
-import qualified Data.Text                     as T
+import           Universum
+
 import           Control.Exception              ( IOException )
-import           Data.OrgMode.Sync.Command      ( eval )
-import           Data.OrgMode.Sync.Executor     ( handle )
-import qualified Prelude
+import           Control.Monad.Except           ( MonadError(..) )
 import           Control.Monad.RWS              ( MonadWriter(..)
                                                 , RWST(..)
                                                 , execRWST
                                                 )
-import           System.Log.FastLogger          ( fromLogStr
-                                                , LogStr
-                                                , toLogStr
+import qualified Data.List                     as L
+import           Data.OrgMode.Sync.Command      ( eval )
+import           Data.OrgMode.Sync.Executor     ( handle )
+import           Data.OrgMode.Sync.Logging      ( MonadLogger(..) )
+import           Data.OrgMode.Sync.Types        ( ActionType(..)
+                                                , Bootstrapped(..)
+                                                , MonadCommandEvaluator(..)
+                                                , MonadFileReader(..)
+                                                , Reminder(..)
+                                                , SyncConfig(..)
+                                                , SyncError(..)
+                                                , Verbosity(..)
                                                 )
+import qualified Data.Text                     as T
 import           GHC.IO.Exception               ( IOErrorType(NoSuchThing)
                                                 , IOException(IOError)
                                                 )
-import qualified Data.List                     as L
+import qualified Prelude
+import           System.Log.FastLogger          ( LogStr
+                                                , fromLogStr
+                                                , toLogStr
+                                                )
 import qualified Universum.String.Conversion   as E
 
-data TestState =
-  TestState
+data TestState = TestState
   { inputFileProvider :: FilePath -> Either IOException T.Text
-  , reminders :: [Reminder]
+  , reminders         :: [Reminder]
   }
 
-data TestOutput =
-  TestOutput
+data TestOutput = TestOutput
   { debugLogs :: [LogStr]
-  , infoLogs :: [LogStr]
+  , infoLogs  :: [LogStr]
   , errorLogs :: [LogStr]
-  } deriving (Show)
+  }
+  deriving Show
 
 instance Semigroup TestOutput where
   TestOutput d i e <> TestOutput d' i' e' = TestOutput (d <> d') (i <> i') (e <> e')
@@ -83,9 +88,9 @@ newtype TestResultT m a = TestO2AMT
 
 -- | Aggregate the logs instead of writing to output
 instance Monad m => MonadLogger (TestResultT m) where
-    logDebug msg = tell $ TestOutput [toLogStr msg] mempty mempty
-    logInfo msg = tell $ TestOutput mempty [toLogStr msg] mempty
-    logError msg = tell $ TestOutput mempty mempty [toLogStr msg]
+  logDebug msg = tell $ TestOutput [toLogStr msg] mempty mempty
+  logInfo msg = tell $ TestOutput mempty [toLogStr msg] mempty
+  logError msg = tell $ TestOutput mempty mempty [toLogStr msg]
 
 -- | Read a file from test state instead of file system
 instance Monad m => MonadFileReader (TestResultT m) where
@@ -152,7 +157,7 @@ e2eSpec = do
           $ given ["***  item"]
           $ \res -> fmap todoName . reminders . fst <$> res `shouldBe` Right ["item"]
 
-        it "flatten the hierarchy of org items"
+        xit "flatten the hierarchy of org items"
           $ given ["* parent", "** child"]
           $ \res -> fmapDefault todoName . reminders . fst <$> res `shouldBe` Right
               ["parent", "child"]

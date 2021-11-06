@@ -1,0 +1,8 @@
+cradle:
+  cabal:
+    - path: "./src"
+      component: "lib:org2any"
+    - path: "./app"
+      component: "executable:org2any"
+    - path: "./test"
+      component: "test:org2any-main-testsuite"

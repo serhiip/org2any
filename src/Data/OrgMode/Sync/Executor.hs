@@ -15,23 +15,40 @@ Handles the event coming to the program: either user events
 module Data.OrgMode.Sync.Executor
   ( execute
   , handle
-  )
-where
+  ) where
 
-import           Data.OrgMode.Sync.Command
 import           Control.Concurrent.Chan        ( readChan
                                                 , writeChan
                                                 )
 import           Control.Monad.Except           ( MonadError
-                                                , throwError
                                                 , liftEither
+                                                , throwError
+                                                )
+import           Data.OrgMode.Sync.Command      ( sync )
+import           Data.OrgMode.Sync.Logging      ( MonadLogger(..) )
+import           Data.OrgMode.Sync.OrgMode.Parsing
+                                                ( items )
+import           Data.OrgMode.Sync.Types        ( ActionType(..)
+                                                , Bootstrapped
+                                                  ( bootstrappedInput
+                                                  , bootstrappedOutput
+                                                  )
+                                                , Event
+                                                  ( EndEvent
+                                                  , SyncEvent
+                                                  , SystemTerminatedEvent
+                                                  , UserTerminatedEvent
+                                                  )
+                                                , MonadCommandEvaluator(..)
+                                                , MonadFileReader(..)
+                                                , StoreType(OSXReminders)
+                                                , SyncError
+                                                  ( FileReadError
+                                                  , NoItemsError
+                                                  , ParseError
+                                                  )
                                                 )
 import           Data.Text                      ( pack )
-import           Data.OrgMode.Sync.Logging
-import           Data.OrgMode.Sync.Parser       ( reminders
-                                                , runParser
-                                                )
-import           Data.OrgMode.Sync.Types
 import           Universum
 
 -- | Event handler listens for input channel supplied in
@@ -74,14 +91,15 @@ handle (SyncAction filePath destination) = do
   logInfo $ "Processing " <> filePath
   readResult <- readFileM filePath
   contents   <- liftEither $ first (FileReadError filePath . show) readResult
-  orgTree    <- liftEither $ runParser contents
 
-  let items = reminders orgTree
-      name  = destination ?: "Reminders"
+  let parseResult = items contents
+      reminders   = maybeToMonoid parseResult
+      name        = destination ?: "Reminders"
 
-  when (null items) (throwError $ NoItemsError filePath)
+  when (isNothing parseResult) (throwError $ ParseError filePath)
+  when (null reminders)        (throwError $ NoItemsError filePath)
 
-  result <- evaluate OSXReminders . sync name $ items
+  result <- evaluate OSXReminders . sync name $ reminders
   liftEither result
 
   logDebug $ "Done synchronizing " <> show filePath <> " to " <> name

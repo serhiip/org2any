@@ -32,16 +32,15 @@ module Data.OrgMode.Sync.Types
   , CommandF(..)
   , MonadCommandEvaluator(..)
   , StoreType(..)
-  )
-where
+  ) where
 
 import           Control.Concurrent.Chan        ( Chan )
+import           Control.Exception              ( IOException )
+import           Control.Monad.Free             ( Free )
 import           System.Log.FastLogger          ( TimedFastLogger
                                                 , ToLogStr(..)
                                                 )
 import           Universum
-import           Control.Exception              ( IOException )
-import           Control.Monad.Free
 
 -- | The amount of logging output 
 data Verbosity
@@ -64,27 +63,27 @@ data Event
   deriving (Show, Eq)
 
 -- | Action that can be performed by the system
-data ActionType
-  = SyncAction FilePath (Maybe Text)
+data ActionType = SyncAction FilePath (Maybe Text)
   -- ^ File synchronization action
   deriving (Show, Eq)
 
 -- | Configuration of how synchronization should be done,
 -- supplied by the user via CLI arguments
 data SyncConfig = SyncConfig
-      { configVerbosity :: Verbosity
+  { configVerbosity :: Verbosity
       -- ^ How much information to send to stdout / stderr
-      } deriving (Show)
+  }
+  deriving Show
 
 -- | Bootstrapped program configuration
 data Bootstrapped = Bootstrapped
-  { bootstrappedConfig :: SyncConfig
+  { bootstrappedConfig  :: SyncConfig
   -- ^ The configuration supplied by user (unmodified)
   , bootstrappedLoggers :: (TimedFastLogger, TimedFastLogger)
   -- ^ stdout / stderr loggers initialized
-  , bootstrappedInput :: Chan Event
+  , bootstrappedInput   :: Chan Event
   -- ^ Input channel
-  , bootstrappedOutput :: Chan ()
+  , bootstrappedOutput  :: Chan ()
   -- ^ Output channel (just to flag program termination to main
   -- thread)
   }
@@ -106,6 +105,8 @@ data SyncError
   -- but usefull to see during development
   | FileReadError FilePath Text
   -- ^ Error reading input file
+  | ParseError FilePath
+  -- ^ Error parsing org file
   deriving (Show, Eq)
 
 instance ToLogStr SyncError where
@@ -134,14 +135,15 @@ data TodoStatus
 -- intermediate type of various types of reminders (at this point only
 -- org headlines or items of Reminders OS X application)
 data Reminder = Reminder
-  { todoName   :: Text
-  , todoId     :: Text
-  , todoBody   :: Maybe Text
-  , todoStatus :: Maybe TodoStatus
+  { todoName       :: Text
+  , todoId         :: Text
+  , todoBody       :: Maybe Text
+  , todoStatus     :: Maybe TodoStatus
   , todoOriginalId :: Text
   -- ^ The ID in the destination it was created from (for org file
   -- @todoId == todoOriginalId@)
-  } deriving (Show)
+  }
+  deriving Show
 
 instance Eq Reminder where
   (==) = (==) `on` todoId
@@ -159,9 +161,11 @@ type BucketId = Text
 -- | Information of place the reminders could be stored in. For
 -- Reminders OS X application that is simply list name and ID. But for
 -- org file that could be org file name
-data Bucket = Bucket { bucketId :: BucketId
-                     , bucketName :: Text
-                     } deriving (Show, Eq, Ord)
+data Bucket = Bucket
+  { bucketId   :: BucketId
+  , bucketName :: Text
+  }
+  deriving (Show, Eq, Ord)
 
 -- | The type of program or service that would provide or store items
 data StoreType = InMemory | OSXReminders deriving (Show, Eq, Ord)

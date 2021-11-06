@@ -17,7 +17,6 @@ module Data.OrgMode.Sync.AppleScript.Types
   )
 where
 
-import           GHC.Generics
 
 import           Data.Time.LocalTime            ( ZonedTime )
 import           Data.Aeson                     ( ToJSON(..)
@@ -31,7 +30,7 @@ import           Data.Aeson                     ( ToJSON(..)
                                                 )
 import           Data.Char                      ( toLower )
 import qualified Data.OrgMode.Sync.Types       as O
-import           Universum
+import Universum
 import           Data.Text                      ( splitOn
                                                 , strip
                                                 )
