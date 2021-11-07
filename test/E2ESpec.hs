@@ -157,7 +157,7 @@ e2eSpec = do
           $ given ["***  item"]
           $ \res -> fmap todoName . reminders . fst <$> res `shouldBe` Right ["item"]
 
-        xit "flatten the hierarchy of org items"
+        it "flatten the hierarchy of org items"
           $ given ["* parent", "** child"]
           $ \res -> fmapDefault todoName . reminders . fst <$> res `shouldBe` Right
               ["parent", "child"]

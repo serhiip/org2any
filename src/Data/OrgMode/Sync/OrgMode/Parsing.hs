@@ -33,27 +33,30 @@ import           Data.OrgMode.Sync.Types        ( Reminder(Reminder)
                                                 )
 import           Universum
 
-items :: Text -> Maybe Reminders
-items fileContents = convertSections <$> parsedFile
+items :: Text -- ^ Contents of org file
+  -> Maybe Reminders
+items fileContents = convertSections Nothing . orgDoc <$> parsedFile
  where
-  parsedFile      = org fileContents
-  convertSections = map toReminder . docSections . orgDoc
+  parsedFile = org fileContents
+  convertSections parent = concatMap toReminder . docSections
+   where
+    toReminder :: Section -> Reminders
+    toReminder sec =
+      let rid      = fromJust . lookup "ID" . sectionProps $ sec
+          title    = sconcat . map prettyWords . sectionHeading $ sec
+          doc      = sectionDoc sec
+          body     = unlines . map block . docBlocks $ doc
+          status   = todo <$> sectionTodo sec
+          children = convertSections (Just rid) doc
+      in  Reminder title rid (Just body) status rid parent : children
 
-  toReminder :: Section -> Reminder
-  toReminder sec =
-    let rid    = fromJust . lookup "ID" . sectionProps $ sec
-        title  = sconcat . map prettyWords . sectionHeading $ sec
-        body   = unlines . map block . docBlocks . sectionDoc $ sec
-        status = todo <$> sectionTodo sec
-    in  Reminder title rid (Just body) status rid
+    todo TODO = Todo
+    todo DONE = Done
 
-  todo TODO = Todo
-  todo DONE = Done
-
-  block :: Block -> Text
-  block (Quote   txt            ) = txt
-  block (Example txt            ) = txt
-  block (Code _ _               ) = ""
-  block (List      (ListItems _)) = ""
-  block (Table     _            ) = ""
-  block (Paragraph ne           ) = sconcat $ map prettyWords ne
+    block :: Block -> Text
+    block (Quote   txt ) = txt
+    block (Example txt ) = txt
+    block (Code _ _    ) = ""
+    block (List      _ ) = ""
+    block (Table     _ ) = ""
+    block (Paragraph ne) = sconcat $ map prettyWords ne

@@ -14,53 +14,54 @@ Stability   : experimental
 module Data.OrgMode.Sync.AppleScript.Types
   ( Reminder(..)
   , ReminderList(..)
-  )
-where
+  ) where
 
 
-import           Data.Time.LocalTime            ( ZonedTime )
-import           Data.Aeson                     ( ToJSON(..)
-                                                , FromJSON(..)
-                                                , (.:)
+import           Data.Aeson                     ( (.:)
                                                 , (.:?)
-                                                , withObject
-                                                , genericToEncoding
+                                                , FromJSON(..)
+                                                , ToJSON(..)
                                                 , defaultOptions
                                                 , fieldLabelModifier
+                                                , genericToEncoding
+                                                , withObject
                                                 )
 import           Data.Char                      ( toLower )
 import qualified Data.OrgMode.Sync.Types       as O
-import Universum
 import           Data.Text                      ( splitOn
                                                 , strip
                                                 )
+import           Data.Time.LocalTime            ( ZonedTime )
+import           Universum
 
 
 -- | A Reminders OS X app representation of TODO list
-data ReminderList = ReminderList {
-    listId :: Text
+data ReminderList = ReminderList
+  { listId   :: Text
   , listName :: Text
-  } deriving (Show, Eq, Ord, Generic)
+  }
+  deriving (Show, Eq, Ord, Generic)
 
 -- | Item representation of Reminders OS X application.
-data Reminder = Reminder {
-    todoId :: Text
+data Reminder = Reminder
+  { todoId               :: Text
     -- ^ Unique identifier
-  , todoBody :: Maybe Text
+  , todoBody             :: Maybe Text
     -- ^ Reminder text
-  , todoCompleted :: Bool
+  , todoCompleted        :: Bool
     -- ^ Completion state
-  , todoName :: Text
+  , todoName             :: Text
     -- ^ Reminder title, current implementation requires this field to
     -- contain the internal ID delimited from title with pipe character
-  , todoPriority :: Int
+  , todoPriority         :: Int
     -- ^ Reminder priority number
-  , todoDueDate :: Maybe ZonedTime
+  , todoDueDate          :: Maybe ZonedTime
   , todoModificationDate :: Maybe ZonedTime
-  , todoCreationDate :: Maybe ZonedTime
-  , todoCompletionDate :: Maybe ZonedTime
-  , todoRemindMeDate :: Maybe ZonedTime
-  } deriving (Show, Generic)
+  , todoCreationDate     :: Maybe ZonedTime
+  , todoCompletionDate   :: Maybe ZonedTime
+  , todoRemindMeDate     :: Maybe ZonedTime
+  }
+  deriving (Show, Generic)
 
 instance FromJSON Reminder where
   parseJSON = withObject "Todo" $ \value ->
@@ -92,11 +93,13 @@ instance O.OrgLike Reminder where
   from Reminder {..} = make . splitOn "|" $ todoName
    where
     status = if todoCompleted then O.Done else O.InProgress
+    make (name : orgId : parentId : _) =
+      pure $ O.Reminder (strip name) orgId todoBody (pure status) todoId (Just parentId)
     make (name : orgId : _) =
-      pure $ O.Reminder (strip name) orgId todoBody (pure status) todoId
+      pure $ O.Reminder (strip name) orgId todoBody (pure status) todoId Nothing
     make _ = mzero
 
-  to O.Reminder {..} = Reminder todoId
+  to O.Reminder {..} = Reminder (todoId <> maybe "" ("|" <>) todoParentId)
                                 todoBody
                                 (Just O.Done == todoStatus)
                                 todoName

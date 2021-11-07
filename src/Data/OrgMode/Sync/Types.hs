@@ -142,6 +142,7 @@ data Reminder = Reminder
   , todoOriginalId :: Text
   -- ^ The ID in the destination it was created from (for org file
   -- @todoId == todoOriginalId@)
+  , todoParentId   :: Maybe Text
   }
   deriving Show
 
