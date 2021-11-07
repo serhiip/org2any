@@ -30,12 +30,12 @@ ERROR_ON_WARN=nil
          -f batch-byte-compile \
          org2any.el
 # Lint
-# "$EMACS" -Q -batch \
-#          --eval "$INIT_PACKAGE_EL" \
-#          -L . \
-#          --eval "(require 'package-lint)" \
-#          -f package-lint-batch-and-exit \
-#          org2any.el || [ -n "${EMACS_LINT_IGNORE+x}" ]
+"$EMACS" -Q -batch \
+         --eval "$INIT_PACKAGE_EL" \
+         -L . \
+         --eval "(require 'package-lint)" \
+         -f package-lint-batch-and-exit \
+         org2any.el || [ -n "${EMACS_LINT_IGNORE+x}" ]
 # Finally, run the testsuite
 "$EMACS" -Q -batch \
          --eval "$INIT_PACKAGE_EL" \

@@ -1,6 +1,7 @@
-;;; org2any.el --- Integration of org2any utility into Emacs -*- coding: utf-8 -*-
+;;; org2any.el --- Integration of org2any utility into -*- coding: utf-8 -*-
 
-;; Package-Requires: ((dash "20190920.1035"))
+;; URL: https://github.com/serhiip/org2any
+;; Package-Requires: ((dash "2.19.1") (emacs "27.2"))
 ;; Version: 0.0.1
 
 ;;; Commentary:
