@@ -1,0 +1,106 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  create_release:
+    name: Create Release Binaries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1.1.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: true
+          prerelease: false
+
+      - name: Store Release URL for later use
+        run: echo "${{ steps.create_release.outputs.upload_url }}" > release
+      - name: Save Release URL File for publish
+        uses: actions/upload-artifact@v1
+        with:
+          name: release_url
+          path: release
+
+  build_artifact:
+    needs: [create_release]
+    name: ${{ matrix.os }}/GHC ${{ matrix.ghc }}/${{ github.ref }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macOS-latest]
+        ghc:
+          - "8.10.6"
+        cabal: ["3.2"]
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Get tag name
+        uses: olegtarasov/get-tag@v2.1
+        id: tag
+        with:
+          tagRegex: "v(.*)"
+          tagRegexGroup: 1
+
+      - name: Setup Haskell
+        uses: haskell/actions/setup@v1
+        id: setup-haskell-cabal
+        with:
+          ghc-version: ${{ matrix.ghc }}
+          cabal-version: ${{ matrix.cabal }}
+
+      - name: Freeze
+        run: |
+          cabal freeze
+
+      - name: Cache ~/.cabal/store
+        uses: actions/cache@v1
+        with:
+          path: ${{ steps.setup-haskell-cabal.outputs.cabal-store }}
+          key: ${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('cabal.project.freeze') }}
+
+      - name: Build binary
+        run: |
+          mkdir dist
+          cabal install executable:org2any --install-method=copy --overwrite-policy=always --installdir=dist
+
+      - name: Set binary path
+        run: |
+          echo "BINARY_PATH=./dist/org2any" >> $GITHUB_ENV
+
+      - name: Compress binary with upx
+        uses: svenstaro/upx-action@2.0.1
+        with:
+          file: ${{ env.BINARY_PATH }}
+
+      - name: Get release URL from previous step
+        uses: actions/download-artifact@v1
+        with:
+          name: release_url
+
+      - name: Set release URL
+        id: get_release_info
+        run: |
+          echo "::set-output name=release_upload_url::$(cat release_url/release)"
+
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.get_release_info.outputs.release_upload_url }}
+          asset_path: ${{ env.BINARY_PATH }}
+          asset_name: org2any-${{ steps.tag.outputs.tag }}-${{ runner.os }}
+          asset_content_type: application/octet-stream
