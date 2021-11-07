@@ -1,0 +1,25 @@
+name: Test Emacs Package
+
+on:
+  pull_request:
+  push:
+    paths:
+    - '**.el'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        emacs_version:
+          - snapshot
+    env:
+      EMACS_LINT_IGNORE: ${{ matrix.lint_ignore }}
+    steps:
+    - uses: purcell/setup-emacs@master
+      with:
+        version: ${{ matrix.emacs_version }}
+
+    - uses: actions/checkout@v2
+    - name: Run tests
+      run: './run-emacs-tests.sh'
