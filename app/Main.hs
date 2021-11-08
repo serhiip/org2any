@@ -18,7 +18,7 @@ import           Control.Monad                  ( forever )
 import           Data.OrgMode.Sync.Executor     ( execute )
 import           Data.OrgMode.Sync.Logging
 import           System.Directory
---import           System.FSNotify         hiding ( Action )
+import           System.FSNotify         hiding ( Action )
 import           System.FilePath
 import           Data.OrgMode.Sync.Types
 import           Universum
@@ -44,8 +44,8 @@ main = do
       bootstrap = Bootstrapped conf loggers inputChan outputChan
       send      = writeChan inputChan
       debug     = logDebug' loggers verbosity
---      info      = logInfo' loggers verbosity
---      error'    = logError' loggers verbosity
+      info      = logInfo' loggers verbosity
+      error'    = logError' loggers verbosity
       term      = CatchOnce $ send SystemTerminatedEvent
 
   _ <- installHandler sigTERM term Nothing
@@ -56,28 +56,28 @@ main = do
   send (SyncEvent path dst)
   send EndEvent
 
-  -- _ <- forkIO . forever $ do
-  --   result <- runResult bootstrap execute
-  --   whenLeft result error'
+  _ <- forkIO . forever $ do
+    result <- runResult bootstrap execute
+    whenLeft result error'
 
-  -- unless toWatch $ send EndEvent
+  unless toWatch $ send EndEvent
 
-  -- watcher <- forkIO . when toWatch $ withManagerConf
-  --   defaultConfig
-  --   (\manager -> do
-  --     watchManagerCleanUp <- watchDir manager
-  --                                     (takeDirectory path)
-  --                                     (equalFilePath canonPath . eventPath)
-  --                                     (const $ send (SyncEvent path dst))
-  --     let stop = watchManagerCleanUp >> debug "File watcher was stopped"
-  --     handle @AsyncException (const stop) $ do
-  --       info "📝 Listening for changes... Press any key to stop"
-  --       line <- getLine
-  --       stop
-  --       send $ UserTerminatedEvent line
-  --   )
+  watcher <- forkIO . when toWatch $ withManagerConf
+    defaultConfig
+    (\manager -> do
+      watchManagerCleanUp <- watchDir manager
+                                      (takeDirectory path)
+                                      (equalFilePath canonPath . eventPath)
+                                      (const $ send (SyncEvent path dst))
+      let stop = watchManagerCleanUp >> debug "File watcher was stopped"
+      handle @AsyncException (const stop) $ do
+        info "📝 Listening for changes... Press any key to stop"
+        line <- getLine
+        stop
+        send $ UserTerminatedEvent line
+    )
 
   readChan outputChan
---  killThread watcher
+  killThread watcher
   debug "Logging handlers cleaned up"
   loggingCleanUp
