@@ -65,6 +65,7 @@ executable org2any
     , universum ==1.5.0
     , unix ==2.7.2.2
     , directory ==1.3.6.0
+    , fsnotify ==0.3.0.1
 
 test-suite org2any-main-testsuite
   type:               exitcode-stdio-1.0
