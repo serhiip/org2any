@@ -17,7 +17,10 @@ import           Data.OrgMode.Sync.Logging      ( MonadLogger(..)
 import           Data.OrgMode.Sync.Types        ( Bootstrapped
                                                 , MonadCommandEvaluator(..)
                                                 , MonadFileReader(..)
-                                                , StoreType(InMemory, OSXReminders)
+                                                , StoreType
+                                                  ( InMemory
+                                                  , OSXReminders
+                                                  )
                                                 , SyncError
                                                 )
 import qualified Data.Text                     as T
@@ -47,11 +50,11 @@ runResult = runResultT
 instance MonadIO m => MonadFileReader (ResultT m) where
   readFileM filePath = liftIO . try $ withFile filePath ReadMode hGetContents
 
-instance (MonadIO m, MonadReader Bootstrapped m) => MonadCommandEvaluator (ResultT m) where
+instance MonadIO m => MonadCommandEvaluator (ResultT m) where
   evaluate OSXReminders = evalAppleScript
   evaluate InMemory     = error . T.pack $ "should not be used yet"  -- pure . snd . eval []
 
-instance (MonadIO m, MonadReader Bootstrapped m) => MonadLogger (ResultT m) where
+instance MonadIO m => MonadLogger (ResultT m) where
   logDebug = logDebugM
   logInfo  = logInfoM
   logError = logErrorM

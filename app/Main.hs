@@ -11,25 +11,43 @@ import           Control.Concurrent             ( forkIO
                                                 , killThread
                                                 )
 import           Control.Concurrent.Chan        ( newChan
-                                                , writeChan
                                                 , readChan
-                                                )
-import           Control.Monad                  ( forever )
-import           Data.OrgMode.Sync.Executor     ( execute )
-import           Data.OrgMode.Sync.Logging
-import           System.Directory
-import           System.FSNotify         hiding ( Action )
-import           System.FilePath
-import           Data.OrgMode.Sync.Types
-import           Universum
-import           System.Posix.Signals           ( sigTERM
-                                                , sigINT
-                                                , installHandler
-                                                , Handler(..)
+                                                , writeChan
                                                 )
 import           Control.Exception              ( AsyncException(..)
                                                 , handle
                                                 )
+import           Data.OrgMode.Sync.Executor     ( execute )
+import           Data.OrgMode.Sync.Logging      ( initLogging
+                                                , logDebug'
+                                                , logError'
+                                                , logInfo'
+                                                )
+import           Data.OrgMode.Sync.ResultT      ( runResult )
+import           Data.OrgMode.Sync.Types        ( Bootstrapped(Bootstrapped)
+                                                , Event
+                                                  ( EndEvent
+                                                  , SyncEvent
+                                                  , SystemTerminatedEvent
+                                                  , UserTerminatedEvent
+                                                  )
+                                                , SyncConfig(configVerbosity)
+                                                )
+import           System.Directory               ( canonicalizePath )
+import           System.FSNotify                ( defaultConfig
+                                                , eventPath
+                                                , watchDir
+                                                , withManagerConf
+                                                )
+import           System.FilePath                ( equalFilePath
+                                                , takeDirectory
+                                                )
+import           System.Posix.Signals           ( Handler(..)
+                                                , installHandler
+                                                , sigINT
+                                                , sigTERM
+                                                )
+import           Universum
 
 main :: IO ()
 main = do
@@ -57,7 +75,7 @@ main = do
   send EndEvent
 
   _ <- forkIO . forever $ do
-    result <- runResult bootstrap execute
+    result <- liftIO $ runResult bootstrap execute
     whenLeft result error'
 
   unless toWatch $ send EndEvent

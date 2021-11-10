@@ -3,8 +3,20 @@
 module AppleScriptSpec where
 
 import           Data.OrgMode.Sync.AppleScript.Internal
-import           Test.Hspec
-import           Data.OrgMode.Sync.Types
+                                                ( createManyScript
+                                                , deleteManyScript
+                                                , listAllScript
+                                                , listListsScript
+                                                , updateManyScript
+                                                )
+import           Data.OrgMode.Sync.Types        ( OrgLike(to)
+                                                , Reminder(Reminder)
+                                                )
+import           Test.Hspec                     ( Spec
+                                                , describe
+                                                , it
+                                                , shouldBe
+                                                )
 import           Universum
 
 remindersSpec :: Spec

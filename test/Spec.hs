@@ -1,8 +1,8 @@
-import           AppleScriptSpec
-import           E2ESpec
-import           CommandSpec
-import           Test.Hspec
-import           Universum
+import AppleScriptSpec ( remindersSpec )
+import E2ESpec ( e2eSpec )
+import CommandSpec ( commandSpec )
+import Test.Hspec ( hspec )
+import Universum
 
 
 main :: IO ()

@@ -3,24 +3,42 @@
 
 module CommandSpec
   ( commandSpec
-  )
-where
+  ) where
 
-import           Data.OrgMode.Sync.Command      ( sync
-                                                , updateMany
+import           Control.Monad.Free             ( Free(..) )
+import           Data.List                      ( nub )
+import           Data.OrgMode.Sync.Command      ( create
                                                 , del
-                                                , create
+                                                , sync
+                                                , updateMany
+                                                )
+import           Data.OrgMode.Sync.Types        ( Bucket(Bucket, bucketName)
+                                                , Command
+                                                , CommandF
+                                                  ( CreateMany
+                                                  , DeleteMany
+                                                  , GetAll
+                                                  , ListBuckets
+                                                  , UpdateAll
+                                                  )
+                                                , Reminder(Reminder, todoName)
+                                                , Reminders
+                                                , SyncError
+                                                  ( InvalidDestinationError
+                                                  )
+                                                , TodoStatus(..)
                                                 )
 import           Data.Text                      ( pack )
-import           Test.Hspec
-import           Test.QuickCheck
-import           Data.OrgMode.Sync.Types
-import           Universum               hiding ( foldl
-                                                , state
-                                                , first
+import           Test.Hspec                     ( Spec
+                                                , describe
+                                                , it
                                                 )
-import           Data.List                      ( nub )
-import           Control.Monad.Free             ( Free(..) )
+import           Test.QuickCheck                ( (==>)
+                                                , Arbitrary(arbitrary)
+                                                , Testable(property)
+                                                , oneof
+                                                )
+import           Universum
 
 instance Arbitrary Text where
   arbitrary = pack <$> arbitrary
@@ -29,7 +47,14 @@ instance Arbitrary TodoStatus where
   arbitrary = oneof $ return <$> [Done, Todo, InProgress]
 
 instance Arbitrary Reminder where
-  arbitrary = Reminder <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary =
+    Reminder
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
 
 defaultBucket :: Bucket
 defaultBucket = Bucket "1" "The List"
@@ -72,7 +97,7 @@ commandSpec = describe "Command interpreter functionality" $ do
       let _             = r :: Reminder
           invalidBucket = Bucket "2" "Invalid"
           (_, res)      = eval [] (create invalidBucket r)
-      in  res == (Left $ InvalidDestinationError "Invalid")
+      in  res == Left (InvalidDestinationError "Invalid")
 
   describe "delete command" $ it "should remove todos" $ property $ \r rs ->
     let _    = (r :: Reminder, rs :: Reminders)
@@ -81,19 +106,19 @@ commandSpec = describe "Command interpreter functionality" $ do
     in  r `notElem` rs'
 
   describe "update command" $ it "should update" $ property $ \rs ->
-    let uniq@(first : _) = nub rs :: Reminders
-        value            = pack "special name"
-        modified         = first { todoName = value }
-        rs'              = run (uniq, updateMany defaultBucket [modified])
-        updated          = not . null $ filter ((== value) . todoName) rs'
+    let uniq@(first_ : _) = nub rs :: Reminders
+        value             = pack "special name"
+        modified          = first_ { todoName = value }
+        rs'               = run (uniq, updateMany defaultBucket [modified])
+        updated           = any ((== value) . todoName) rs'
     in  not (null rs) ==> length uniq == length rs' && updated
 
   describe "synchronize command" $ do
 
-    it "synchronizes states of two lists" $ property $ \input state ->
-      let _       = (input :: Reminders, state :: Reminders)
+    it "synchronizes states of two lists" $ property $ \input state_ ->
+      let _       = (input :: Reminders, state_ :: Reminders)
           input'  = sort input
-          state'  = sort state
+          state'  = sort state_
           state'' = run (state', sync (bucketName defaultBucket) input')
       in  input' /= state' ==> input' == sort state''
 
@@ -101,4 +126,4 @@ commandSpec = describe "Command interpreter functionality" $ do
       let _             = r :: Reminder
           invalidBucket = Bucket "2" "Invalid"
           (_, res)      = eval [] (sync (bucketName invalidBucket) [r])
-      in  res == (Left $ InvalidDestinationError "Invalid")
+      in  res == Left (InvalidDestinationError "Invalid")
