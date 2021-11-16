@@ -74,10 +74,12 @@ jobs:
         run: |
           mkdir dist
           cabal install executable:org2any --install-method=copy --overwrite-policy=always --installdir=dist
-
-      - name: Set binary path
-        run: |
           echo "BINARY_PATH=./dist/org2any" >> $GITHUB_ENV
+
+      - name: Build Emacs package
+        run: |
+          cp ./org2any.el ./dist/
+          echo "EMACS_PACKAGE_PATH=./dist/org2any.el" >> $GITHUB_ENV
 
       - name: Compress binary with upx
         uses: svenstaro/upx-action@2.0.1
@@ -94,8 +96,8 @@ jobs:
         run: |
           echo "::set-output name=release_upload_url::$(cat release_url/release)"
 
-      - name: Upload Release Asset
-        id: upload-release-asset
+      - name: Add org2any binary to release assets
+        id: upload-release-asset-binary
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -104,3 +106,15 @@ jobs:
           asset_path: ${{ env.BINARY_PATH }}
           asset_name: org2any-${{ steps.tag.outputs.tag }}-${{ runner.os }}
           asset_content_type: application/octet-stream
+
+      - name: Add org2any Emacs package to release assets
+        id: upload-release-asset-package
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.get_release_info.outputs.release_upload_url }}
+          asset_path: ${{ env.EMACS_PACKAGE_PATH }}
+          asset_name: org2any.el
+          asset_content_type: application/octet-stream
+
