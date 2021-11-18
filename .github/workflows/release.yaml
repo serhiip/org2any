@@ -45,6 +45,8 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v2
+        with:
+          clean: false
 
       - name: Get tag name
         uses: olegtarasov/get-tag@v2.1
@@ -73,6 +75,7 @@ jobs:
       - name: Build binary
         run: |
           mkdir dist
+          sed -e "s|ORG2ANY_VERSION|$(git describe --all --long | tr "-" " " | awk '{sub("tags/", "", $1) }1' | awk '{ print $1 " " $3}')|" -i "" app/Main.hs
           cabal install executable:org2any --install-method=copy --overwrite-policy=always --installdir=dist
           echo "BINARY_PATH=./dist/org2any" >> $GITHUB_ENV
 
